@@ -1,0 +1,11 @@
+name = "overpriseed"
+main = "src/index.ts"
+compatibility_date = "2024-12-20"
+
+[env.production]
+name = "overpriseed-production"
+
+[[d1_databases]]
+binding = "overpriseed-db"
+database_name = "overpriseed-database"
+database_id = "YOUR_DATABASE_ID"

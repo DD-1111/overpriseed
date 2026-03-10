@@ -1,0 +1,23 @@
+{
+  "name": "overpriseed",
+  "version": "0.1.0",
+  "description": "A forum platform for discussing overpriced startup deals",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241205.0",
+    "@types/node": "^20.11.5",
+    "typescript": "^5.0.4",
+    "wrangler": "^3.95.0"
+  },
+  "dependencies": {
+    "hono": "^4.6.13"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

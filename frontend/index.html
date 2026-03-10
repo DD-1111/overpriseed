@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overpriseed - Exposing Overpriced Startup Deals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'forum-bg': '#0a0a0a',
+                        'forum-card': '#1a1a1a',
+                        'forum-border': '#2a2a2a',
+                        'forum-text': '#e0e0e0',
+                        'forum-accent': '#ff4444',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-forum-bg text-forum-text min-h-screen">
+    <div x-data="app()" x-init="fetchDeals()">
+        <!-- Header -->
+        <header class="border-b border-forum-border sticky top-0 bg-forum-bg/95 backdrop-blur-sm z-50">
+            <div class="max-w-6xl mx-auto px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-forum-accent">💸 Overpriseed</h1>
+                        <p class="text-sm text-gray-500">Exposing overvalued startup deals</p>
+                    </div>
+                    <nav class="flex gap-6">
+                        <a href="#" @click.prevent="currentView = 'deals'" 
+                           :class="currentView === 'deals' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
+                           class="font-medium transition-colors">Deals</a>
+                        <a href="#" @click.prevent="currentView = 'challenges'" 
+                           :class="currentView === 'challenges' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
+                           class="font-medium transition-colors">Challenges</a>
+                        <a href="#" @click.prevent="currentView = 'leaderboard'" 
+                           :class="currentView === 'leaderboard' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
+                           class="font-medium transition-colors">Leaderboard</a>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-6xl mx-auto px-4 py-8">
+            <!-- Deals View -->
+            <div x-show="currentView === 'deals'" x-cloak>
+                <div class="mb-6">
+                    <h2 class="text-xl font-semibold mb-2">Recent Overpriced Deals</h2>
+                    <p class="text-gray-500">Community-sourced questionable valuations</p>
+                </div>
+
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-12">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-forum-accent"></div>
+                    <p class="mt-2 text-gray-500">Loading deals...</p>
+                </div>
+
+                <!-- Error State -->
+                <div x-show="error" x-cloak class="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
+                    <p class="text-red-400" x-text="error"></p>
+                </div>
+
+                <!-- Deals List -->
+                <div x-show="!loading && !error" class="space-y-4">
+                    <template x-for="deal in deals" :key="deal.id">
+                        <div class="bg-forum-card border border-forum-border rounded-lg p-6 hover:border-forum-accent/50 transition-all cursor-pointer">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-white" x-text="deal.company"></h3>
+                                    <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
+                                        <span x-text="deal.round"></span>
+                                        <span>•</span>
+                                        <span class="text-forum-accent font-medium" x-text="'$' + formatNumber(deal.amount_usd)"></span>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-600" x-text="formatDate(deal.created_at)"></span>
+                            </div>
+                            <div class="flex items-center gap-4 text-sm">
+                                <a :href="deal.source_url" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">
+                                    Source →
+                                </a>
+                                <button class="text-gray-500 hover:text-forum-accent transition-colors">
+                                    View Analysis
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Empty State -->
+                    <div x-show="deals.length === 0" class="text-center py-12 text-gray-500">
+                        <p>No deals found. Be the first to submit one!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Challenges View -->
+            <div x-show="currentView === 'challenges'" x-cloak>
+                <div class="text-center py-12 text-gray-500">
+                    <h2 class="text-xl font-semibold mb-4">Weekly Challenges</h2>
+                    <p>Build alternatives to overpriced solutions</p>
+                    <p class="mt-4">Coming soon...</p>
+                </div>
+            </div>
+
+            <!-- Leaderboard View -->
+            <div x-show="currentView === 'leaderboard'" x-cloak>
+                <div class="text-center py-12 text-gray-500">
+                    <h2 class="text-xl font-semibold mb-4">Leaderboard</h2>
+                    <p>Top contributors and challenge winners</p>
+                    <p class="mt-4">Coming soon...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function app() {
+            return {
+                currentView: 'deals',
+                deals: [],
+                loading: false,
+                error: null,
+
+                async fetchDeals() {
+                    this.loading = true;
+                    this.error = null;
+                    try {
+                        const response = await fetch('http://localhost:8787/api/v1/deals');
+                        const data = await response.json();
+                        if (data.success) {
+                            this.deals = data.data || [];
+                        } else {
+                            throw new Error(data.error || 'Failed to fetch deals');
+                        }
+                    } catch (err) {
+                        this.error = err.message || 'Failed to load deals. Please try again later.';
+                        console.error('Error fetching deals:', err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                formatNumber(num) {
+                    return new Intl.NumberFormat('en-US', {
+                        notation: 'compact',
+                        maximumFractionDigits: 1
+                    }).format(num);
+                },
+
+                formatDate(dateStr) {
+                    const date = new Date(dateStr);
+                    const now = new Date();
+                    const diffMs = now - date;
+                    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays === 0) return 'Today';
+                    if (diffDays === 1) return 'Yesterday';
+                    if (diffDays < 7) return `${diffDays} days ago`;
+                    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+                    return `${Math.floor(diffDays / 30)} months ago`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
