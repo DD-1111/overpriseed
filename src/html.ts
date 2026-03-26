@@ -1,4 +1,5 @@
-export const indexHtml = `<!DOCTYPE html>
+export const indexHtml = `
+<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
@@ -28,6 +29,7 @@ export const indexHtml = `<!DOCTYPE html>
 </head>
 <body class="bg-forum-bg text-forum-text min-h-screen">
     <div x-data="app()" x-init="fetchDeals()">
+        <!-- Header -->
         <header class="border-b border-forum-border sticky top-0 bg-forum-bg/95 backdrop-blur-sm z-50">
             <div class="max-w-6xl mx-auto px-4 py-4">
                 <div class="flex items-center justify-between">
@@ -50,8 +52,37 @@ export const indexHtml = `<!DOCTYPE html>
             </div>
         </header>
 
+        <!-- Main Content -->
         <main class="max-w-6xl mx-auto px-4 py-8">
+            <!-- Deals View -->
             <div x-show="currentView === 'deals'" x-cloak>
+                <!-- Search and Filter -->
+                <div class="mb-6 flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <input type="text" 
+                               x-model="searchQuery" 
+                               placeholder="Search companies..." 
+                               class="w-full bg-forum-card border border-forum-border rounded-lg px-4 py-2 text-forum-text placeholder-gray-500 focus:outline-none focus:border-forum-accent/50">
+                    </div>
+                    <div class="flex gap-2">
+                        <select x-model="roundFilter" 
+                                class="bg-forum-card border border-forum-border rounded-lg px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
+                            <option value="">All Rounds</option>
+                            <option value="Pre-Seed">Pre-Seed</option>
+                            <option value="Seed">Seed</option>
+                            <option value="Series A">Series A</option>
+                            <option value="Series B">Series B</option>
+                            <option value="Series C">Series C+</option>
+                        </select>
+                        <select x-model="sortBy" 
+                                class="bg-forum-card border border-forum-border rounded-lg px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
+                            <option value="date">Newest</option>
+                            <option value="amount_desc">Highest \$</option>
+                            <option value="amount_asc">Lowest \$</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Stats Panel -->
                 <div x-show="!loading && deals.length > 0" class="grid grid-cols-3 gap-4 mb-8">
                     <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
@@ -59,7 +90,7 @@ export const indexHtml = `<!DOCTYPE html>
                         <p class="text-sm text-gray-500 mt-1">Total Deals</p>
                     </div>
                     <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
-                        <p class="text-3xl font-bold text-green-400" x-text="'$' + formatNumber(totalFunding())"></p>
+                        <p class="text-3xl font-bold text-green-400" x-text="'\$' + formatNumber(totalFunding())"></p>
                         <p class="text-sm text-gray-500 mt-1">Total Funding</p>
                     </div>
                     <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
@@ -73,17 +104,24 @@ export const indexHtml = `<!DOCTYPE html>
                     <p class="text-gray-500">Community-sourced questionable valuations</p>
                 </div>
 
+                <!-- Loading State -->
                 <div x-show="loading" class="text-center py-12">
                     <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-forum-accent"></div>
                     <p class="mt-2 text-gray-500">Loading deals...</p>
                 </div>
 
+                <!-- Error State -->
                 <div x-show="error" x-cloak class="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
                     <p class="text-red-400" x-text="error"></p>
                 </div>
 
+                <!-- Deals List -->
                 <div x-show="!loading && !error" class="space-y-4">
-                    <template x-for="deal in deals" :key="deal.id">
+                    <!-- Filter Results Count -->
+                    <p x-show="searchQuery || roundFilter" class="text-sm text-gray-500 mb-2">
+                        Showing <span class="text-forum-accent" x-text="filteredDeals.length"></span> of <span x-text="deals.length"></span> deals
+                    </p>
+                    <template x-for="deal in filteredDeals" :key="deal.id">
                         <div class="bg-forum-card border border-forum-border rounded-lg p-6 hover:border-forum-accent/50 transition-all cursor-pointer">
                             <div class="flex items-start justify-between mb-3">
                                 <div>
@@ -91,23 +129,33 @@ export const indexHtml = `<!DOCTYPE html>
                                     <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
                                         <span x-text="deal.round"></span>
                                         <span>•</span>
-                                        <span class="text-forum-accent font-medium" x-text="'$' + formatNumber(deal.amount_usd)"></span>
+                                        <span class="text-forum-accent font-medium" x-text="'\$' + formatNumber(deal.amount_usd)"></span>
                                     </div>
                                 </div>
                                 <span class="text-xs text-gray-600" x-text="formatDate(deal.created_at)"></span>
                             </div>
                             <div class="flex items-center gap-4 text-sm">
-                                <a :href="deal.source_url" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">Source →</a>
-                                <button class="text-gray-500 hover:text-forum-accent transition-colors">View Analysis</button>
+                                <a :href="deal.source_url" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">
+                                    Source →
+                                </a>
+                                <button class="text-gray-500 hover:text-forum-accent transition-colors">
+                                    View Analysis
+                                </button>
                             </div>
                         </div>
                     </template>
+
+                    <!-- Empty State -->
+                    <div x-show="filteredDeals.length === 0 && deals.length > 0" class="text-center py-12 text-gray-500">
+                        <p>No deals match your filters. Try adjusting your search.</p>
+                    </div>
                     <div x-show="deals.length === 0" class="text-center py-12 text-gray-500">
                         <p>No deals found. Be the first to submit one!</p>
                     </div>
                 </div>
             </div>
 
+            <!-- Challenges View -->
             <div x-show="currentView === 'challenges'" x-cloak>
                 <div class="text-center py-12 text-gray-500">
                     <h2 class="text-xl font-semibold mb-4">Weekly Challenges</h2>
@@ -116,6 +164,7 @@ export const indexHtml = `<!DOCTYPE html>
                 </div>
             </div>
 
+            <!-- Leaderboard View -->
             <div x-show="currentView === 'leaderboard'" x-cloak>
                 <div class="text-center py-12 text-gray-500">
                     <h2 class="text-xl font-semibold mb-4">Leaderboard</h2>
@@ -133,6 +182,45 @@ export const indexHtml = `<!DOCTYPE html>
                 deals: [],
                 loading: false,
                 error: null,
+                searchQuery: '',
+                roundFilter: '',
+                sortBy: 'date',
+
+                get filteredDeals() {
+                    let result = [...this.deals];
+                    
+                    // Search filter
+                    if (this.searchQuery.trim()) {
+                        const query = this.searchQuery.toLowerCase();
+                        result = result.filter(deal => 
+                            deal.company.toLowerCase().includes(query)
+                        );
+                    }
+                    
+                    // Round filter
+                    if (this.roundFilter) {
+                        if (this.roundFilter === 'Series C') {
+                            result = result.filter(deal => 
+                                deal.round.includes('Series C') || 
+                                deal.round.includes('Series D') || 
+                                deal.round.includes('Series E')
+                            );
+                        } else {
+                            result = result.filter(deal => deal.round === this.roundFilter);
+                        }
+                    }
+                    
+                    // Sort
+                    if (this.sortBy === 'amount_desc') {
+                        result.sort((a, b) => (b.amount_usd || 0) - (a.amount_usd || 0));
+                    } else if (this.sortBy === 'amount_asc') {
+                        result.sort((a, b) => (a.amount_usd || 0) - (b.amount_usd || 0));
+                    } else {
+                        result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    }
+                    
+                    return result;
+                },
 
                 async fetchDeals() {
                     this.loading = true;
@@ -146,8 +234,8 @@ export const indexHtml = `<!DOCTYPE html>
                             throw new Error(data.error || 'Failed to fetch deals');
                         }
                     } catch (err) {
-                        this.error = err.message || 'Failed to load deals.';
-                        console.error('Error:', err);
+                        this.error = err.message || 'Failed to load deals. Please try again later.';
+                        console.error('Error fetching deals:', err);
                     } finally {
                         this.loading = false;
                     }
@@ -168,9 +256,9 @@ export const indexHtml = `<!DOCTYPE html>
                     
                     if (diffDays === 0) return 'Today';
                     if (diffDays === 1) return 'Yesterday';
-                    if (diffDays < 7) return diffDays + ' days ago';
-                    if (diffDays < 30) return Math.floor(diffDays / 7) + ' weeks ago';
-                    return Math.floor(diffDays / 30) + ' months ago';
+                    if (diffDays < 7) return \`\${diffDays} days ago\`;
+                    if (diffDays < 30) return \`\${Math.floor(diffDays / 7)} weeks ago\`;
+                    return \`\${Math.floor(diffDays / 30)} months ago\`;
                 },
 
                 totalFunding() {
