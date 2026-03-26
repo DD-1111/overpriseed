@@ -6,17 +6,16 @@
 
 ## 🔥 P0 - 紧急（本周）
 
-### 1. 改进融资新闻解析
-**问题**: 当前正则解析太粗糙，抓到的数据质量差
-**方案**: 用 AI（GPT-4o-mini）解析 Perplexity 返回的文本
-**文件**: `scripts/fetch_deals.py`
+### ~~1. 改进融资新闻解析~~ ✅ DONE
+**状态**: 已完成 (2026-03-26)
+- 使用结构化 Perplexity prompt
+- 添加 JSON 提取函数
+- 改进正则回退
 
-```python
-# TODO: 替换 parse_funding_news() 函数
-# 用 OpenAI API 解析，返回结构化 JSON
-```
+### 2. 添加数据去重逻辑 ✅ DONE
+**状态**: 已完成 - 用 company + amount 做唯一键
 
-### 2. 添加数据去重逻辑
+### 3. 改进搜索 prompt
 **问题**: 同一个融资可能被重复抓取
 **方案**: 用 company + round + amount 做唯一键
 
@@ -85,6 +84,7 @@
 - [x] 2026-03-26: 前端页面上线
 - [x] 2026-03-26: GitHub Actions 自动抓取
 - [x] 2026-03-26: GitHub Secrets 配置
+- [x] 2026-03-26: 改进解析逻辑（结构化 prompt + JSON 提取）
 
 ---
 
@@ -94,6 +94,11 @@
 - 初始部署完成
 - 首次自动抓取成功
 - 发现解析精度问题，列入 P0
+- **P0-1 完成**：改进解析逻辑
+  - 使用结构化 Perplexity prompt 直接要求 JSON 输出
+  - 添加 `extract_json_from_text()` 函数
+  - 改进正则回退方案
+  - 测试成功：`AgentMail: $6,000,000 (Seed)`
 
 ---
 
