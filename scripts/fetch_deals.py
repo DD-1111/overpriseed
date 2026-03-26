@@ -23,7 +23,6 @@ def get_perplexity_token() -> str:
     """从环境变量获取 Perplexity session token"""
     token = os.getenv("PERPLEXITY_SESSION_TOKEN")
     if not token:
-        # 尝试从 .env 文件读取
         env_file = os.path.expanduser("~/.env")
         if os.path.exists(env_file):
             with open(env_file) as f:
@@ -44,7 +43,6 @@ def search_perplexity(query: str, mode: str = "pro", model: str = "sonar") -> st
     client = perplexity.Client(cookies={"next-auth.session-token": token})
     resp = client.search(query, mode=mode, model=model)
     
-    # 解析回答
     for step in resp.get("text", []):
         if step.get("step_type") == "FINAL":
             answer_str = step["content"]["answer"]
@@ -54,42 +52,150 @@ def search_perplexity(query: str, mode: str = "pro", model: str = "sonar") -> st
     return str(resp)
 
 
-def parse_funding_news(text: str) -> List[Dict]:
-    """从 Perplexity 回答中解析融资信息"""
+def fetch_structured_deals() -> List[Dict]:
+    """
+    用结构化 prompt 获取融资新闻
+    直接让 Perplexity 返回 JSON 格式
+    """
+    prompt = """Find the latest AI startup funding rounds from the past 7 days.
+
+Return ONLY a JSON array with this exact format (no other text):
+[
+  {
+    "company": "Company Name",
+    "round": "Series A/Seed/etc",
+    "amount_usd": 50000000,
+    "source_url": "https://..."
+  }
+]
+
+Focus on:
+- AI/ML startups
+- Controversial or potentially overpriced deals
+- ChatGPT wrappers, AI email assistants, AI PDF tools
+- Large funding rounds ($10M+)
+
+If no recent funding news found, return: []
+"""
+    
+    result = search_perplexity(prompt)
+    
+    # 尝试从回复中提取 JSON
+    deals = extract_json_from_text(result)
+    
+    if not deals:
+        # 如果结构化解析失败，回退到正则解析
+        print("  ⚠️  Structured parsing failed, falling back to regex")
+        deals = parse_funding_news_regex(result)
+    
+    return deals
+
+
+def extract_json_from_text(text: str) -> List[Dict]:
+    """从文本中提取 JSON 数组"""
+    # 尝试找到 JSON 数组
+    json_patterns = [
+        r'\[[\s\S]*?\]',  # 匹配 [...] 
+    ]
+    
+    for pattern in json_patterns:
+        matches = re.findall(pattern, text)
+        for match in matches:
+            try:
+                data = json.loads(match)
+                if isinstance(data, list) and len(data) > 0:
+                    # 验证数据结构
+                    valid_deals = []
+                    for item in data:
+                        if isinstance(item, dict) and 'company' in item:
+                            deal = {
+                                'company': str(item.get('company', '')).strip(),
+                                'round': str(item.get('round', 'Unknown')).strip(),
+                                'amount_usd': parse_amount(item.get('amount_usd', 0)),
+                                'source_url': str(item.get('source_url', '')).strip()
+                            }
+                            if deal['company'] and deal['amount_usd'] > 0:
+                                valid_deals.append(deal)
+                    if valid_deals:
+                        return valid_deals
+            except json.JSONDecodeError:
+                continue
+    
+    return []
+
+
+def parse_amount(value) -> int:
+    """解析金额，支持多种格式"""
+    if isinstance(value, (int, float)):
+        return int(value)
+    
+    if isinstance(value, str):
+        value = value.replace('$', '').replace(',', '').strip().lower()
+        
+        multiplier = 1
+        if 'billion' in value or 'b' in value:
+            multiplier = 1_000_000_000
+            value = re.sub(r'[^\d.]', '', value)
+        elif 'million' in value or 'm' in value:
+            multiplier = 1_000_000
+            value = re.sub(r'[^\d.]', '', value)
+        
+        try:
+            return int(float(value) * multiplier)
+        except:
+            return 0
+    
+    return 0
+
+
+def parse_funding_news_regex(text: str) -> List[Dict]:
+    """回退方案：用正则解析融资新闻"""
     deals = []
+    seen = set()
     
-    # 用 GPT 或简单规则解析
-    # 这里用简单的正则提取
-    
-    # 匹配模式: "Company raised $XXM in Series X"
+    # 改进的正则模式
     patterns = [
-        r"([A-Z][A-Za-z0-9\s]+?)\s+(?:raised|closes?|secures?|gets?|announces?)\s+\$?([\d.]+)\s*(million|billion|M|B)",
-        r"([A-Z][A-Za-z0-9\s]+?)\s+(?:Series\s+[A-Z]|Seed|Pre-Seed)\s+.*?\$?([\d.]+)\s*(million|billion|M|B)",
+        # "Company raised $50M in Series A"
+        r'\*\*([A-Z][A-Za-z0-9\s\-\.]+?)\*\*[^$]*?\$(\d+(?:\.\d+)?)\s*(million|billion|M|B)',
+        r'([A-Z][A-Za-z0-9\s\-\.]{2,30}?)\s+(?:has\s+)?(?:raised|closes?d?|secures?d?|announces?d?|gets?|got)\s+\$(\d+(?:\.\d+)?)\s*(million|billion|M|B)',
+        r'([A-Z][A-Za-z0-9\s\-\.]{2,30}?),?\s+(?:a[n]?\s+)?(?:AI|ML|startup)[^$]{0,50}\$(\d+(?:\.\d+)?)\s*(million|billion|M|B)',
     ]
     
     for pattern in patterns:
         matches = re.findall(pattern, text, re.IGNORECASE)
         for match in matches:
             company = match[0].strip()
+            
+            # 过滤掉明显不是公司名的
+            skip_words = ['the', 'a', 'an', 'this', 'that', 'according', 'report', 'analysis', 'funding']
+            if company.lower() in skip_words or len(company) < 3 or len(company) > 50:
+                continue
+            
             amount = float(match[1])
             unit = match[2].lower()
             
             if unit in ['billion', 'b']:
                 amount *= 1_000_000_000
-            elif unit in ['million', 'm']:
+            else:
                 amount *= 1_000_000
             
             # 提取轮次
-            round_match = re.search(rf"{re.escape(company)}.*?(Series\s+[A-Z]|Seed|Pre-Seed|Series\s+\w+)", text, re.IGNORECASE)
+            round_match = re.search(
+                rf'{re.escape(company)}[^.]*?(Series\s+[A-Z]|Seed|Pre-Seed|Series\s+\w+|funding\s+round)',
+                text, re.IGNORECASE
+            )
             round_name = round_match.group(1) if round_match else "Unknown"
             
-            deals.append({
-                "company": company,
-                "round": round_name,
-                "amount_usd": int(amount),
-                "source_url": "",  # Perplexity 不总是提供具体 URL
-                "raw_text": text[:500]  # 保留原文片段用于调试
-            })
+            # 去重
+            key = f"{company.lower()}_{int(amount)}"
+            if key not in seen:
+                seen.add(key)
+                deals.append({
+                    "company": company,
+                    "round": round_name,
+                    "amount_usd": int(amount),
+                    "source_url": ""
+                })
     
     return deals
 
@@ -105,12 +211,11 @@ def write_to_d1(deals: List[Dict], dry_run: bool = False) -> int:
         raise ValueError("CLOUDFLARE_API_TOKEN not found")
     
     if dry_run:
-        print(f"[DRY RUN] Would insert {len(deals)} deals")
+        print(f"[DRY RUN] Would insert {len(deals)} deals:")
         for d in deals:
             print(f"  - {d['company']}: ${d['amount_usd']:,} ({d['round']})")
         return len(deals)
     
-    # D1 HTTP API
     url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/d1/database/{database_id}/query"
     headers = {
         "Authorization": f"Bearer {cf_token}",
@@ -119,11 +224,11 @@ def write_to_d1(deals: List[Dict], dry_run: bool = False) -> int:
     
     inserted = 0
     for deal in deals:
-        # 检查是否已存在
-        check_sql = "SELECT id FROM deals WHERE company = ? AND round = ?"
+        # 检查是否已存在（用公司名 + 金额去重）
+        check_sql = "SELECT id FROM deals WHERE company = ? AND amount_usd = ?"
         resp = requests.post(url, headers=headers, json={
             "sql": check_sql,
-            "params": [deal["company"], deal["round"]]
+            "params": [deal["company"], deal["amount_usd"]]
         })
         
         if resp.status_code == 200:
@@ -143,7 +248,7 @@ def write_to_d1(deals: List[Dict], dry_run: bool = False) -> int:
         })
         
         if resp.status_code == 200 and resp.json().get("success"):
-            print(f"  ✅ Inserted: {deal['company']} - ${deal['amount_usd']:,}")
+            print(f"  ✅ Inserted: {deal['company']} - ${deal['amount_usd']:,} ({deal['round']})")
             inserted += 1
         else:
             print(f"  ❌ Failed: {deal['company']} - {resp.text[:100]}")
@@ -154,38 +259,48 @@ def write_to_d1(deals: List[Dict], dry_run: bool = False) -> int:
 def main():
     parser = argparse.ArgumentParser(description="Fetch AI funding news")
     parser.add_argument("--dry-run", action="store_true", help="Don't write to database")
-    parser.add_argument("--query", default="AI startup funding rounds this week 2026", help="Search query")
+    parser.add_argument("--query", default=None, help="Custom search query (uses structured prompt if not set)")
     parser.add_argument("--debug", action="store_true", help="Print raw response")
     
     args = parser.parse_args()
     
-    print(f"🔍 Searching: {args.query}")
+    print("🔍 Fetching AI funding news...")
     print("-" * 50)
     
     try:
-        # 搜索
-        result = search_perplexity(args.query)
+        if args.query:
+            # 自定义查询
+            print(f"Custom query: {args.query}")
+            result = search_perplexity(args.query)
+            if args.debug:
+                print("Raw result:")
+                print(result)
+                print("-" * 50)
+            deals = parse_funding_news_regex(result)
+        else:
+            # 使用结构化 prompt
+            print("Using structured prompt...")
+            deals = fetch_structured_deals()
         
-        if args.debug:
-            print("Raw result:")
-            print(result)
-            print("-" * 50)
-        
-        # 解析
-        deals = parse_funding_news(result)
         print(f"📊 Found {len(deals)} deals")
         
         if not deals:
-            print("No deals found. Raw response preview:")
-            print(result[:500])
+            print("No deals found.")
             return
         
-        # 写入
+        for d in deals:
+            print(f"  • {d['company']}: ${d['amount_usd']:,} ({d['round']})")
+        
+        print("-" * 50)
+        
+        # 写入数据库
         inserted = write_to_d1(deals, dry_run=args.dry_run)
         print(f"\n✅ Done! Inserted {inserted} new deals")
         
     except Exception as e:
         print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 
