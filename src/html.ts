@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+export const indexHtml = `<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
@@ -28,7 +28,6 @@
 </head>
 <body class="bg-forum-bg text-forum-text min-h-screen">
     <div x-data="app()" x-init="fetchDeals()">
-        <!-- Header -->
         <header class="border-b border-forum-border sticky top-0 bg-forum-bg/95 backdrop-blur-sm z-50">
             <div class="max-w-6xl mx-auto px-4 py-4">
                 <div class="flex items-center justify-between">
@@ -51,27 +50,22 @@
             </div>
         </header>
 
-        <!-- Main Content -->
         <main class="max-w-6xl mx-auto px-4 py-8">
-            <!-- Deals View -->
             <div x-show="currentView === 'deals'" x-cloak>
                 <div class="mb-6">
                     <h2 class="text-xl font-semibold mb-2">Recent Overpriced Deals</h2>
                     <p class="text-gray-500">Community-sourced questionable valuations</p>
                 </div>
 
-                <!-- Loading State -->
                 <div x-show="loading" class="text-center py-12">
                     <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-forum-accent"></div>
                     <p class="mt-2 text-gray-500">Loading deals...</p>
                 </div>
 
-                <!-- Error State -->
                 <div x-show="error" x-cloak class="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
                     <p class="text-red-400" x-text="error"></p>
                 </div>
 
-                <!-- Deals List -->
                 <div x-show="!loading && !error" class="space-y-4">
                     <template x-for="deal in deals" :key="deal.id">
                         <div class="bg-forum-card border border-forum-border rounded-lg p-6 hover:border-forum-accent/50 transition-all cursor-pointer">
@@ -87,24 +81,17 @@
                                 <span class="text-xs text-gray-600" x-text="formatDate(deal.created_at)"></span>
                             </div>
                             <div class="flex items-center gap-4 text-sm">
-                                <a :href="deal.source_url" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">
-                                    Source →
-                                </a>
-                                <button class="text-gray-500 hover:text-forum-accent transition-colors">
-                                    View Analysis
-                                </button>
+                                <a :href="deal.source_url" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">Source →</a>
+                                <button class="text-gray-500 hover:text-forum-accent transition-colors">View Analysis</button>
                             </div>
                         </div>
                     </template>
-
-                    <!-- Empty State -->
                     <div x-show="deals.length === 0" class="text-center py-12 text-gray-500">
                         <p>No deals found. Be the first to submit one!</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Challenges View -->
             <div x-show="currentView === 'challenges'" x-cloak>
                 <div class="text-center py-12 text-gray-500">
                     <h2 class="text-xl font-semibold mb-4">Weekly Challenges</h2>
@@ -113,7 +100,6 @@
                 </div>
             </div>
 
-            <!-- Leaderboard View -->
             <div x-show="currentView === 'leaderboard'" x-cloak>
                 <div class="text-center py-12 text-gray-500">
                     <h2 class="text-xl font-semibold mb-4">Leaderboard</h2>
@@ -144,8 +130,8 @@
                             throw new Error(data.error || 'Failed to fetch deals');
                         }
                     } catch (err) {
-                        this.error = err.message || 'Failed to load deals. Please try again later.';
-                        console.error('Error fetching deals:', err);
+                        this.error = err.message || 'Failed to load deals.';
+                        console.error('Error:', err);
                     } finally {
                         this.loading = false;
                     }
@@ -166,12 +152,12 @@
                     
                     if (diffDays === 0) return 'Today';
                     if (diffDays === 1) return 'Yesterday';
-                    if (diffDays < 7) return `${diffDays} days ago`;
-                    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-                    return `${Math.floor(diffDays / 30)} months ago`;
+                    if (diffDays < 7) return diffDays + ' days ago';
+                    if (diffDays < 30) return Math.floor(diffDays / 7) + ' weeks ago';
+                    return Math.floor(diffDays / 30) + ' months ago';
                 }
             }
         }
     </script>
 </body>
-</html>
+</html>`;

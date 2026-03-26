@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { indexHtml } from './html'
 
 type Bindings = {
   DB: D1Database
@@ -7,13 +8,17 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-app.use('/*', cors({
+// Serve frontend
+app.get('/', (c) => {
+  return c.html(indexHtml)
+})
+
+app.use('/api/*', cors({
   origin: '*',
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   exposeHeaders: ['Content-Length'],
   maxAge: 600,
-  credentials: true,
 }))
 
 app.get('/api/health', (c) => {
