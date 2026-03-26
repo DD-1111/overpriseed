@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
 type Bindings = {
-  'overpriseed-db': D1Database
+  DB: D1Database
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -26,7 +26,7 @@ app.get('/api/health', (c) => {
 
 app.get('/api/v1/deals', async (c) => {
   try {
-    const db = c.env['overpriseed-db']
+    const db = c.env.DB
     const { results } = await db.prepare(
       `SELECT * FROM deals ORDER BY created_at DESC`
     ).all()
@@ -45,7 +45,7 @@ app.get('/api/v1/deals', async (c) => {
 
 app.get('/api/v1/analyses', async (c) => {
   try {
-    const db = c.env['overpriseed-db']
+    const db = c.env.DB
     const dealId = c.req.query('deal_id')
     
     let query = `SELECT * FROM analyses`
@@ -74,7 +74,7 @@ app.get('/api/v1/analyses', async (c) => {
 
 app.get('/api/v1/challenges', async (c) => {
   try {
-    const db = c.env['overpriseed-db']
+    const db = c.env.DB
     const { results } = await db.prepare(
       `SELECT * FROM challenges ORDER BY week_number DESC, starts_at DESC`
     ).all()

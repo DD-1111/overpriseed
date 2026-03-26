@@ -6,6 +6,6 @@ compatibility_date = "2024-12-20"
 name = "overpriseed-production"
 
 [[d1_databases]]
-binding = "overpriseed-db"
-database_name = "overpriseed-database"
-database_id = "YOUR_DATABASE_ID"
+binding = "DB"
+database_name = "overpriseed-db"
+database_id = "bc5272b6-133e-49ba-bb19-adb1bca72816"
