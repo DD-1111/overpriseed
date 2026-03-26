@@ -27,8 +27,11 @@
 
 ## 🟡 P1 - 重要（下周）
 
-### 4. Overpriced Score 系统
-- [ ] 设计评分维度（技术复杂度、AI 可替代性、护城河）
+### ~~4. Overpriced Score 系统~~ ✅ DONE
+**状态**: 已完成 (2026-03-26)
+- [x] 设计评分维度（5 维度，满分 100）
+- [x] 创建评估框架文档 `docs/SCORING_FRAMEWORK.md`
+- [x] 创建自动评估脚本 `scripts/analyze_deal.py`
 - [ ] 添加 API endpoint: POST /api/v1/analyses
 - [ ] 前端添加提交分析表单
 
