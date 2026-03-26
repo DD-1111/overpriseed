@@ -93,6 +93,15 @@
 
 ## 进度记录
 
+### 2026-03-27 (凌晨)
+- **前端改进**：添加统计面板
+  - 显示 Total Deals、Total Funding、This Week 三个指标
+  - 响应式 3 列布局
+  - 使用已有的 formatNumber() 格式化金额
+- **CI 改进**：添加 deploy.yml workflow
+  - push 到 main 时自动部署
+  - 支持手动触发
+
 ### 2026-03-26
 - 初始部署完成
 - 首次自动抓取成功
