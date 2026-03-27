@@ -111,6 +111,68 @@ app.get('/api/v1/analyses', async (c) => {
   }
 })
 
+app.post('/api/v1/analyses', async (c) => {
+  try {
+    const db = c.env.DB
+    const body = await c.req.json()
+    
+    // Validate required fields
+    const { deal_id, author, content, overpriced_score, tech_complexity, ai_replaceability, moat_assessment } = body
+    
+    if (!deal_id || !author || !content) {
+      return c.json({ 
+        success: false, 
+        error: 'Missing required fields: deal_id, author, content' 
+      }, 400)
+    }
+    
+    // Validate scores are in range 1-10
+    const scores = [overpriced_score, tech_complexity, ai_replaceability, moat_assessment]
+    for (const score of scores) {
+      if (score !== undefined && (score < 1 || score > 10)) {
+        return c.json({ 
+          success: false, 
+          error: 'Scores must be between 1 and 10' 
+        }, 400)
+      }
+    }
+    
+    // Check deal exists
+    const deal = await db.prepare('SELECT id FROM deals WHERE id = ?').bind(deal_id).first()
+    if (!deal) {
+      return c.json({ success: false, error: 'Deal not found' }, 404)
+    }
+    
+    // Insert analysis
+    const result = await db.prepare(`
+      INSERT INTO analyses (deal_id, author, content, overpriced_score, tech_complexity, ai_replaceability, moat_assessment)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      deal_id,
+      author,
+      content,
+      overpriced_score ?? null,
+      tech_complexity ?? null,
+      ai_replaceability ?? null,
+      moat_assessment ?? null
+    ).run()
+    
+    // Return the created analysis
+    const created = await db.prepare('SELECT * FROM analyses WHERE id = ?').bind(result.meta.last_row_id).first()
+    
+    return c.json({ 
+      success: true,
+      data: created
+    }, 201)
+  } catch (error) {
+    console.error('Failed to create analysis:', error)
+    return c.json({ 
+      success: false,
+      error: 'Failed to create analysis' 
+    }, 500)
+  }
+})
+
 app.get('/api/v1/challenges', async (c) => {
   try {
     const db = c.env.DB
