@@ -48,6 +48,40 @@ app.get('/api/v1/deals', async (c) => {
   }
 })
 
+app.get('/api/v1/deals/:id', async (c) => {
+  try {
+    const db = c.env.DB
+    const id = c.req.param('id')
+    
+    // Get deal
+    const deal = await db.prepare(
+      `SELECT * FROM deals WHERE id = ?`
+    ).bind(id).first()
+    
+    if (!deal) {
+      return c.json({ success: false, error: 'Deal not found' }, 404)
+    }
+    
+    // Get analyses for this deal
+    const { results: analyses } = await db.prepare(
+      `SELECT * FROM analyses WHERE deal_id = ? ORDER BY created_at DESC`
+    ).bind(id).all()
+    
+    return c.json({ 
+      success: true,
+      data: {
+        ...deal,
+        analyses: analyses || []
+      }
+    })
+  } catch (error) {
+    return c.json({ 
+      success: false,
+      error: 'Failed to fetch deal' 
+    }, 500)
+  }
+})
+
 app.get('/api/v1/analyses', async (c) => {
   try {
     const db = c.env.DB

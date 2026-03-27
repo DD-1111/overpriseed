@@ -121,7 +121,7 @@
                         Showing <span class="text-forum-accent" x-text="filteredDeals.length"></span> of <span x-text="deals.length"></span> deals
                     </p>
                     <template x-for="deal in filteredDeals" :key="deal.id">
-                        <div class="bg-forum-card border border-forum-border rounded-lg p-6 hover:border-forum-accent/50 transition-all cursor-pointer">
+                        <div @click="openDealModal(deal)" class="bg-forum-card border border-forum-border rounded-lg p-6 hover:border-forum-accent/50 transition-all cursor-pointer">
                             <div class="flex items-start justify-between mb-3">
                                 <div>
                                     <h3 class="text-lg font-semibold text-white" x-text="deal.company"></h3>
@@ -134,10 +134,10 @@
                                 <span class="text-xs text-gray-600" x-text="formatDate(deal.created_at)"></span>
                             </div>
                             <div class="flex items-center gap-4 text-sm">
-                                <a :href="deal.source_url" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">
+                                <a :href="deal.source_url" target="_blank" @click.stop class="text-blue-400 hover:text-blue-300 transition-colors">
                                     Source →
                                 </a>
-                                <button class="text-gray-500 hover:text-forum-accent transition-colors">
+                                <button @click.stop="openDealModal(deal)" class="text-gray-500 hover:text-forum-accent transition-colors">
                                     View Analysis
                                 </button>
                             </div>
@@ -172,6 +172,108 @@
                 </div>
             </div>
         </main>
+
+        <!-- Deal Detail Modal -->
+        <div x-show="showModal" x-cloak 
+             class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             @keydown.escape.window="closeModal()">
+            <!-- Backdrop -->
+            <div class="absolute inset-0 bg-black/80" @click="closeModal()"></div>
+            
+            <!-- Modal Content -->
+            <div class="relative bg-forum-card border border-forum-border rounded-xl max-w-2xl w-full max-h-[85vh] overflow-hidden"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100">
+                
+                <!-- Loading State -->
+                <div x-show="modalLoading" class="p-12 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-forum-accent"></div>
+                    <p class="mt-2 text-gray-500">Loading deal details...</p>
+                </div>
+
+                <!-- Deal Content -->
+                <div x-show="!modalLoading && selectedDeal" class="overflow-y-auto max-h-[85vh]">
+                    <!-- Header -->
+                    <div class="sticky top-0 bg-forum-card border-b border-forum-border p-6">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h2 class="text-2xl font-bold text-white" x-text="selectedDeal?.company"></h2>
+                                <div class="flex items-center gap-3 mt-2">
+                                    <span class="bg-forum-accent/20 text-forum-accent px-3 py-1 rounded-full text-sm" x-text="selectedDeal?.round"></span>
+                                    <span class="text-xl font-semibold text-green-400" x-text="'$' + formatNumber(selectedDeal?.amount_usd || 0)"></span>
+                                </div>
+                            </div>
+                            <button @click="closeModal()" class="text-gray-500 hover:text-white transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="mt-4 flex items-center gap-4 text-sm">
+                            <span class="text-gray-500" x-text="'Added ' + formatDate(selectedDeal?.created_at)"></span>
+                            <a x-show="selectedDeal?.source_url" :href="selectedDeal?.source_url" target="_blank" 
+                               class="text-blue-400 hover:text-blue-300 transition-colors">
+                                View Source →
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Analyses Section -->
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span>🔍 Community Analyses</span>
+                            <span class="bg-forum-border text-gray-400 px-2 py-0.5 rounded text-sm" 
+                                  x-text="(selectedDeal?.analyses?.length || 0) + ' analysis'"></span>
+                        </h3>
+
+                        <!-- No Analyses -->
+                        <div x-show="!selectedDeal?.analyses?.length" class="bg-forum-bg border border-forum-border rounded-lg p-8 text-center">
+                            <p class="text-gray-500 mb-4">No analyses yet. Be the first to evaluate this deal!</p>
+                            <button class="bg-forum-accent hover:bg-forum-accent/80 text-white px-4 py-2 rounded-lg transition-colors">
+                                Submit Analysis
+                            </button>
+                        </div>
+
+                        <!-- Analyses List -->
+                        <div x-show="selectedDeal?.analyses?.length" class="space-y-4">
+                            <template x-for="analysis in selectedDeal?.analyses || []" :key="analysis.id">
+                                <div class="bg-forum-bg border border-forum-border rounded-lg p-4">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="text-sm text-gray-400">by <span class="text-white" x-text="analysis.author"></span></span>
+                                        <span class="text-xs text-gray-600" x-text="formatDate(analysis.created_at)"></span>
+                                    </div>
+                                    
+                                    <!-- Scores -->
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                                        <div class="text-center">
+                                            <p class="text-2xl font-bold" :class="analysis.overpriced_score >= 7 ? 'text-forum-accent' : analysis.overpriced_score >= 4 ? 'text-yellow-400' : 'text-green-400'"
+                                               x-text="analysis.overpriced_score + '/10'"></p>
+                                            <p class="text-xs text-gray-500">Overpriced</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-2xl font-bold text-blue-400" x-text="analysis.tech_complexity + '/10'"></p>
+                                            <p class="text-xs text-gray-500">Tech Complexity</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-2xl font-bold text-purple-400" x-text="analysis.ai_replaceability + '/10'"></p>
+                                            <p class="text-xs text-gray-500">AI Replaceable</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-2xl font-bold text-orange-400" x-text="analysis.moat_assessment + '/10'"></p>
+                                            <p class="text-xs text-gray-500">Moat Score</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Content -->
+                                    <p class="text-gray-300 text-sm leading-relaxed" x-text="analysis.content"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -184,6 +286,9 @@
                 searchQuery: '',
                 roundFilter: '',
                 sortBy: 'date',
+                showModal: false,
+                modalLoading: false,
+                selectedDeal: null,
 
                 get filteredDeals() {
                     let result = [...this.deals];
@@ -268,6 +373,32 @@
                     const oneWeekAgo = new Date();
                     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
                     return this.deals.filter(deal => new Date(deal.created_at) >= oneWeekAgo).length;
+                },
+
+                async openDealModal(deal) {
+                    this.showModal = true;
+                    this.modalLoading = true;
+                    this.selectedDeal = null;
+                    
+                    try {
+                        const response = await fetch(`/api/v1/deals/${deal.id}`);
+                        const data = await response.json();
+                        if (data.success) {
+                            this.selectedDeal = data.data;
+                        } else {
+                            throw new Error(data.error || 'Failed to fetch deal');
+                        }
+                    } catch (err) {
+                        console.error('Error fetching deal:', err);
+                        this.selectedDeal = { ...deal, analyses: [] };
+                    } finally {
+                        this.modalLoading = false;
+                    }
+                },
+
+                closeModal() {
+                    this.showModal = false;
+                    this.selectedDeal = null;
                 }
             }
         }
