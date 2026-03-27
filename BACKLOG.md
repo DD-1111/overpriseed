@@ -32,7 +32,7 @@
 - [x] 设计评分维度（5 维度，满分 100）
 - [x] 创建评估框架文档 `docs/SCORING_FRAMEWORK.md`
 - [x] 创建自动评估脚本 `scripts/analyze_deal.py`
-- [ ] 添加 API endpoint: POST /api/v1/analyses
+- [x] 添加 API endpoint: POST /api/v1/analyses (2026-03-28)
 - [ ] 前端添加提交分析表单
 
 ### 5. 用户系统（简单版）
@@ -93,6 +93,13 @@
 ---
 
 ## 进度记录
+
+### 2026-03-28 (早上)
+- **分析提交 API**：添加 POST /api/v1/analyses 端点
+  - 验证必填字段 (deal_id, author, content)
+  - 分数范围校验 (1-10)
+  - 检查 deal 是否存在
+  - 返回创建的分析记录
 
 ### 2026-03-28 (凌晨)
 - **Score 可视化**：为分析分数添加圆形进度条
