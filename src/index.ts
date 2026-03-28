@@ -192,4 +192,42 @@ app.get('/api/v1/challenges', async (c) => {
   }
 })
 
+// Leaderboard: deals ranked by average overpriced score
+app.get('/api/v1/leaderboard', async (c) => {
+  try {
+    const db = c.env.DB
+    const { results } = await db.prepare(`
+      SELECT 
+        d.id,
+        d.company,
+        d.round,
+        d.amount_usd,
+        d.source_url,
+        d.created_at,
+        COUNT(a.id) as analysis_count,
+        ROUND(AVG(a.overpriced_score), 1) as avg_overpriced,
+        ROUND(AVG(a.tech_complexity), 1) as avg_tech_complexity,
+        ROUND(AVG(a.ai_replaceability), 1) as avg_ai_replaceability,
+        ROUND(AVG(a.moat_assessment), 1) as avg_moat
+      FROM deals d
+      LEFT JOIN analyses a ON d.id = a.deal_id
+      GROUP BY d.id
+      HAVING analysis_count > 0
+      ORDER BY avg_overpriced DESC, analysis_count DESC
+      LIMIT 20
+    `).all()
+    
+    return c.json({ 
+      success: true,
+      data: results 
+    })
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error)
+    return c.json({ 
+      success: false,
+      error: 'Failed to fetch leaderboard' 
+    }, 500)
+  }
+})
+
 export default app
