@@ -28,12 +28,12 @@
 ## 🟡 P1 - 重要（下周）
 
 ### ~~4. Overpriced Score 系统~~ ✅ DONE
-**状态**: 已完成 (2026-03-26)
+**状态**: 已完成 (2026-03-28)
 - [x] 设计评分维度（5 维度，满分 100）
 - [x] 创建评估框架文档 `docs/SCORING_FRAMEWORK.md`
 - [x] 创建自动评估脚本 `scripts/analyze_deal.py`
 - [x] 添加 API endpoint: POST /api/v1/analyses (2026-03-28)
-- [ ] 前端添加提交分析表单
+- [x] 前端添加提交分析表单 (2026-03-28)
 
 ### 5. 用户系统（简单版）
 - [ ] GitHub OAuth 登录
@@ -93,6 +93,13 @@
 ---
 
 ## 进度记录
+
+### 2026-03-28 (中午)
+- **分析提交表单**：P1-4 完成！用户现在可以在 Deal 详情页提交分析
+  - 滑块输入 4 个评分维度（Overpriced/Tech Complexity/AI Replaceability/Moat）
+  - 表单验证 + loading 状态
+  - 提交成功后自动刷新分析列表
+  - 通过 GitHub Actions 自动部署
 
 ### 2026-03-28 (早上)
 - **分析提交 API**：添加 POST /api/v1/analyses 端点
