@@ -40,3 +40,13 @@ jobs:
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
         run: |
           python scripts/fetch_deals.py --query "AI wrapper startup raised funding controversial"
+      
+      - name: Auto-analyze new deals
+        env:
+          PERPLEXITY_SESSION_TOKEN: ${{ secrets.PERPLEXITY_SESSION_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: |
+          echo "🤖 Auto-analyzing deals without analysis..."
+          python scripts/auto_analyze.py --limit 3 --delay 5

@@ -69,9 +69,12 @@
 
 ## 🔵 P3 - 未来
 
-### 10. AI 自动分析
-- [ ] 对每个新 deal 自动生成初步分析
-- [ ] 估算"复刻成本"（需要多少人、多少时间）
+### ~~10. AI 自动分析~~ ✅ DONE
+**状态**: 已完成 (2026-03-29)
+- [x] 对每个新 deal 自动生成初步分析
+- [x] 估算"复刻成本"（需要多少人、多少时间）
+- [x] `scripts/auto_analyze.py` 批量分析脚本
+- [x] GitHub Actions 自动运行（fetch 后分析新 deals）
 
 ### 11. 邮件订阅
 - [ ] 每周发送 Overpriced Top 10
@@ -93,6 +96,15 @@
 ---
 
 ## 进度记录
+
+### 2026-03-29 (早上)
+- **AI 自动分析**：P3-10 完成
+  - 新增 `scripts/auto_analyze.py` 批量分析脚本
+  - 查询没有分析的 deals (LEFT JOIN + IS NULL)
+  - 调用现有 `analyze_deal()` 生成 AI 分析
+  - 保存到 analyses 表，分数映射到 1-10 分制
+  - GitHub Actions 集成：fetch 后自动分析最多 3 个新 deals
+  - 支持 --limit, --dry-run, --delay 参数
 
 ### 2026-03-29 (凌晨)
 - **Leaderboard 排行榜**：P2-9 部分完成
