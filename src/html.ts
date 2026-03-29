@@ -6,6 +6,7 @@ export const indexHtml = `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Overpriseed - Exposing Overpriced Startup Deals</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
@@ -77,25 +78,33 @@ export const indexHtml = `
                         <select x-model="sortBy" 
                                 class="bg-forum-card border border-forum-border rounded-lg px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
                             <option value="date">Newest</option>
-                            <option value="amount_desc">Highest $</option>
-                            <option value="amount_asc">Lowest $</option>
+                            <option value="amount_desc">Highest \$</option>
+                            <option value="amount_asc">Lowest \$</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Stats Panel -->
-                <div x-show="!loading && deals.length > 0" class="grid grid-cols-3 gap-4 mb-8">
+                <div x-show="!loading && deals.length > 0" class="grid grid-cols-3 gap-4 mb-6">
                     <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
                         <p class="text-3xl font-bold text-forum-accent" x-text="deals.length"></p>
                         <p class="text-sm text-gray-500 mt-1">Total Deals</p>
                     </div>
                     <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
-                        <p class="text-3xl font-bold text-green-400" x-text="'$' + formatNumber(totalFunding())"></p>
+                        <p class="text-3xl font-bold text-green-400" x-text="'\$' + formatNumber(totalFunding())"></p>
                         <p class="text-sm text-gray-500 mt-1">Total Funding</p>
                     </div>
                     <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
                         <p class="text-3xl font-bold text-blue-400" x-text="dealsThisWeek()"></p>
                         <p class="text-sm text-gray-500 mt-1">This Week</p>
+                    </div>
+                </div>
+
+                <!-- Funding Trend Chart -->
+                <div x-show="!loading && deals.length > 0" x-init="\$watch('deals', () => renderFundingChart())" class="bg-forum-card border border-forum-border rounded-lg p-4 mb-8">
+                    <h3 class="text-sm font-medium text-gray-400 mb-3">📈 Monthly Funding Trend</h3>
+                    <div class="h-48">
+                        <canvas id="fundingChart"></canvas>
                     </div>
                 </div>
 
@@ -129,7 +138,7 @@ export const indexHtml = `
                                     <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
                                         <span x-text="deal.round"></span>
                                         <span>•</span>
-                                        <span class="text-forum-accent font-medium" x-text="'$' + formatNumber(deal.amount_usd)"></span>
+                                        <span class="text-forum-accent font-medium" x-text="'\$' + formatNumber(deal.amount_usd)"></span>
                                     </div>
                                 </div>
                                 <span class="text-xs text-gray-600" x-text="formatDate(deal.created_at)"></span>
@@ -165,7 +174,7 @@ export const indexHtml = `
             </div>
 
             <!-- Leaderboard View -->
-            <div x-show="currentView === 'leaderboard'" x-cloak x-init="$watch('currentView', val => val === 'leaderboard' && fetchLeaderboard())">
+            <div x-show="currentView === 'leaderboard'" x-cloak x-init="\$watch('currentView', val => val === 'leaderboard' && fetchLeaderboard())">
                 <div class="mb-6">
                     <h2 class="text-xl font-semibold mb-2">🏆 Most Overpriced Deals</h2>
                     <p class="text-gray-500">Ranked by average community Overpriced Score</p>
@@ -194,7 +203,7 @@ export const indexHtml = `
                                 <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
                                     <span x-text="item.round"></span>
                                     <span>•</span>
-                                    <span class="text-green-400" x-text="'$' + formatNumber(item.amount_usd)"></span>
+                                    <span class="text-green-400" x-text="'\$' + formatNumber(item.amount_usd)"></span>
                                     <span>•</span>
                                     <span x-text="item.analysis_count + ' analyses'"></span>
                                 </div>
@@ -276,7 +285,7 @@ export const indexHtml = `
                                 <h2 class="text-2xl font-bold text-white" x-text="selectedDeal?.company"></h2>
                                 <div class="flex items-center gap-3 mt-2">
                                     <span class="bg-forum-accent/20 text-forum-accent px-3 py-1 rounded-full text-sm" x-text="selectedDeal?.round"></span>
-                                    <span class="text-xl font-semibold text-green-400" x-text="'$' + formatNumber(selectedDeal?.amount_usd || 0)"></span>
+                                    <span class="text-xl font-semibold text-green-400" x-text="'\$' + formatNumber(selectedDeal?.amount_usd || 0)"></span>
                                 </div>
                             </div>
                             <button @click="closeModal()" class="text-gray-500 hover:text-white transition-colors">
@@ -542,6 +551,8 @@ export const indexHtml = `
                         const data = await response.json();
                         if (data.success) {
                             this.deals = data.data || [];
+                            // Render chart after data loads
+                            this.\$nextTick(() => this.renderFundingChart());
                         } else {
                             throw new Error(data.error || 'Failed to fetch deals');
                         }
@@ -568,9 +579,9 @@ export const indexHtml = `
                     
                     if (diffDays === 0) return 'Today';
                     if (diffDays === 1) return 'Yesterday';
-                    if (diffDays < 7) return `${diffDays} days ago`;
-                    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-                    return `${Math.floor(diffDays / 30)} months ago`;
+                    if (diffDays < 7) return \`\${diffDays} days ago\`;
+                    if (diffDays < 30) return \`\${Math.floor(diffDays / 7)} weeks ago\`;
+                    return \`\${Math.floor(diffDays / 30)} months ago\`;
                 },
 
                 totalFunding() {
@@ -583,13 +594,124 @@ export const indexHtml = `
                     return this.deals.filter(deal => new Date(deal.created_at) >= oneWeekAgo).length;
                 },
 
+                fundingChart: null,
+
+                renderFundingChart() {
+                    if (this.deals.length === 0) return;
+                    
+                    // Group deals by month
+                    const monthlyData = {};
+                    this.deals.forEach(deal => {
+                        const date = new Date(deal.created_at);
+                        const key = \`\${date.getFullYear()}-\${String(date.getMonth() + 1).padStart(2, '0')}\`;
+                        if (!monthlyData[key]) {
+                            monthlyData[key] = { amount: 0, count: 0 };
+                        }
+                        monthlyData[key].amount += deal.amount_usd || 0;
+                        monthlyData[key].count += 1;
+                    });
+                    
+                    // Sort by date and take last 6 months
+                    const sortedMonths = Object.keys(monthlyData).sort().slice(-6);
+                    const labels = sortedMonths.map(m => {
+                        const [year, month] = m.split('-');
+                        return new Date(year, parseInt(month) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                    });
+                    const amounts = sortedMonths.map(m => monthlyData[m].amount / 1000000);
+                    const counts = sortedMonths.map(m => monthlyData[m].count);
+                    
+                    const ctx = document.getElementById('fundingChart');
+                    if (!ctx) return;
+                    
+                    // Destroy existing chart
+                    if (this.fundingChart) {
+                        this.fundingChart.destroy();
+                    }
+                    
+                    this.fundingChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Funding (\$M)',
+                                data: amounts,
+                                backgroundColor: 'rgba(255, 68, 68, 0.6)',
+                                borderColor: '#ff4444',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                yAxisID: 'y'
+                            }, {
+                                label: 'Deals',
+                                data: counts,
+                                type: 'line',
+                                borderColor: '#60a5fa',
+                                backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: '#60a5fa',
+                                pointRadius: 4,
+                                tension: 0.3,
+                                yAxisID: 'y1'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    labels: {
+                                        color: '#9ca3af',
+                                        usePointStyle: true,
+                                        padding: 15
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: '#2a2a2a' },
+                                    ticks: { color: '#9ca3af' }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    position: 'left',
+                                    grid: { color: '#2a2a2a' },
+                                    ticks: { 
+                                        color: '#ff4444',
+                                        callback: (val) => '\$' + val + 'M'
+                                    },
+                                    title: {
+                                        display: false
+                                    }
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    position: 'right',
+                                    grid: { drawOnChartArea: false },
+                                    ticks: { 
+                                        color: '#60a5fa',
+                                        stepSize: 1
+                                    },
+                                    title: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+
                 async openDealModal(deal) {
                     this.showModal = true;
                     this.modalLoading = true;
                     this.selectedDeal = null;
                     
                     try {
-                        const response = await fetch(`/api/v1/deals/${deal.id}`);
+                        const response = await fetch(\`/api/v1/deals/\${deal.id}\`);
                         const data = await response.json();
                         if (data.success) {
                             this.selectedDeal = data.data;
