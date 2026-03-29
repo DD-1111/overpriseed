@@ -56,7 +56,7 @@
 - [ ] 社区投票机制
 
 ### 8. 更多数据源
-- [ ] 接入 TechCrunch RSS
+- [x] 接入 TechCrunch RSS ✅ (2026-03-29)
 - [ ] 接入 Crunchbase API（如果有免费额度）
 - [ ] 接入 Twitter/X 融资新闻
 
@@ -96,6 +96,15 @@
 ---
 
 ## 进度记录
+
+### 2026-03-29 (中午)
+- **TechCrunch RSS 数据源**：P2-8 部分完成
+  - 新增 `scripts/fetch_techcrunch.py`
+  - 抓取 TechCrunch Startups + Venture RSS feeds
+  - 自动过滤 AI 相关 + 融资相关文章
+  - 从标题提取公司名、金额、轮次
+  - 黑名单过滤误报（"VCs"、"Why" 等）
+  - GitHub Actions 集成：每日自动抓取
 
 ### 2026-03-29 (早上)
 - **AI 自动分析**：P3-10 完成

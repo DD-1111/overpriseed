@@ -41,6 +41,15 @@ jobs:
         run: |
           python scripts/fetch_deals.py --query "AI wrapper startup raised funding controversial"
       
+      - name: Fetch TechCrunch RSS
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: |
+          echo "📡 Fetching TechCrunch RSS..."
+          python scripts/fetch_techcrunch.py --days 3
+      
       - name: Auto-analyze new deals
         env:
           PERPLEXITY_SESSION_TOKEN: ${{ secrets.PERPLEXITY_SESSION_TOKEN }}
