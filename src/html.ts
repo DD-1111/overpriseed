@@ -38,7 +38,7 @@ export const indexHtml = `
                         <h1 class="text-2xl font-bold text-forum-accent">💸 Overpriseed</h1>
                         <p class="text-sm text-gray-500">Exposing overvalued startup deals</p>
                     </div>
-                    <nav class="flex gap-6">
+                    <nav class="flex gap-6 items-center">
                         <a href="#" @click.prevent="currentView = 'deals'" 
                            :class="currentView === 'deals' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
                            class="font-medium transition-colors">Deals</a>
@@ -48,6 +48,13 @@ export const indexHtml = `
                         <a href="#" @click.prevent="currentView = 'leaderboard'" 
                            :class="currentView === 'leaderboard' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
                            class="font-medium transition-colors">Leaderboard</a>
+                        <a href="/feed.xml" target="_blank"
+                           class="text-orange-500 hover:text-orange-400 transition-colors" title="RSS Feed">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                             <circle cx="6.18" cy="17.82" r="2.18"/>
+                             <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/>
+                           </svg>
+                        </a>
                     </nav>
                 </div>
             </div>
@@ -78,8 +85,8 @@ export const indexHtml = `
                         <select x-model="sortBy" 
                                 class="bg-forum-card border border-forum-border rounded-lg px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
                             <option value="date">Newest</option>
-                            <option value="amount_desc">Highest \$</option>
-                            <option value="amount_asc">Lowest \$</option>
+                            <option value="amount_desc">Highest $</option>
+                            <option value="amount_asc">Lowest $</option>
                         </select>
                     </div>
                 </div>
@@ -91,7 +98,7 @@ export const indexHtml = `
                         <p class="text-sm text-gray-500 mt-1">Total Deals</p>
                     </div>
                     <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
-                        <p class="text-3xl font-bold text-green-400" x-text="'\$' + formatNumber(totalFunding())"></p>
+                        <p class="text-3xl font-bold text-green-400" x-text="'$' + formatNumber(totalFunding())"></p>
                         <p class="text-sm text-gray-500 mt-1">Total Funding</p>
                     </div>
                     <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
@@ -100,11 +107,21 @@ export const indexHtml = `
                     </div>
                 </div>
 
-                <!-- Funding Trend Chart -->
-                <div x-show="!loading && deals.length > 0" x-init="\$watch('deals', () => renderFundingChart())" class="bg-forum-card border border-forum-border rounded-lg p-4 mb-8">
-                    <h3 class="text-sm font-medium text-gray-400 mb-3">📈 Monthly Funding Trend</h3>
-                    <div class="h-48">
-                        <canvas id="fundingChart"></canvas>
+                <!-- Charts Grid -->
+                <div x-show="!loading && deals.length > 0" x-init="$watch('deals', () => { renderFundingChart(); renderRoundChart(); })" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+                    <!-- Funding Trend Chart -->
+                    <div class="lg:col-span-2 bg-forum-card border border-forum-border rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-400 mb-3">📈 Monthly Funding Trend</h3>
+                        <div class="h-48">
+                            <canvas id="fundingChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Round Distribution Chart -->
+                    <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-400 mb-3">🎯 Round Distribution</h3>
+                        <div class="h-48">
+                            <canvas id="roundChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -138,7 +155,7 @@ export const indexHtml = `
                                     <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
                                         <span x-text="deal.round"></span>
                                         <span>•</span>
-                                        <span class="text-forum-accent font-medium" x-text="'\$' + formatNumber(deal.amount_usd)"></span>
+                                        <span class="text-forum-accent font-medium" x-text="'$' + formatNumber(deal.amount_usd)"></span>
                                     </div>
                                 </div>
                                 <span class="text-xs text-gray-600" x-text="formatDate(deal.created_at)"></span>
@@ -174,7 +191,7 @@ export const indexHtml = `
             </div>
 
             <!-- Leaderboard View -->
-            <div x-show="currentView === 'leaderboard'" x-cloak x-init="\$watch('currentView', val => val === 'leaderboard' && fetchLeaderboard())">
+            <div x-show="currentView === 'leaderboard'" x-cloak x-init="$watch('currentView', val => val === 'leaderboard' && fetchLeaderboard())">
                 <div class="mb-6">
                     <h2 class="text-xl font-semibold mb-2">🏆 Most Overpriced Deals</h2>
                     <p class="text-gray-500">Ranked by average community Overpriced Score</p>
@@ -203,7 +220,7 @@ export const indexHtml = `
                                 <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
                                     <span x-text="item.round"></span>
                                     <span>•</span>
-                                    <span class="text-green-400" x-text="'\$' + formatNumber(item.amount_usd)"></span>
+                                    <span class="text-green-400" x-text="'$' + formatNumber(item.amount_usd)"></span>
                                     <span>•</span>
                                     <span x-text="item.analysis_count + ' analyses'"></span>
                                 </div>
@@ -285,7 +302,7 @@ export const indexHtml = `
                                 <h2 class="text-2xl font-bold text-white" x-text="selectedDeal?.company"></h2>
                                 <div class="flex items-center gap-3 mt-2">
                                     <span class="bg-forum-accent/20 text-forum-accent px-3 py-1 rounded-full text-sm" x-text="selectedDeal?.round"></span>
-                                    <span class="text-xl font-semibold text-green-400" x-text="'\$' + formatNumber(selectedDeal?.amount_usd || 0)"></span>
+                                    <span class="text-xl font-semibold text-green-400" x-text="'$' + formatNumber(selectedDeal?.amount_usd || 0)"></span>
                                 </div>
                             </div>
                             <button @click="closeModal()" class="text-gray-500 hover:text-white transition-colors">
@@ -551,8 +568,11 @@ export const indexHtml = `
                         const data = await response.json();
                         if (data.success) {
                             this.deals = data.data || [];
-                            // Render chart after data loads
-                            this.\$nextTick(() => this.renderFundingChart());
+                            // Render charts after data loads
+                            this.$nextTick(() => {
+                                this.renderFundingChart();
+                                this.renderRoundChart();
+                            });
                         } else {
                             throw new Error(data.error || 'Failed to fetch deals');
                         }
@@ -579,9 +599,9 @@ export const indexHtml = `
                     
                     if (diffDays === 0) return 'Today';
                     if (diffDays === 1) return 'Yesterday';
-                    if (diffDays < 7) return \`\${diffDays} days ago\`;
-                    if (diffDays < 30) return \`\${Math.floor(diffDays / 7)} weeks ago\`;
-                    return \`\${Math.floor(diffDays / 30)} months ago\`;
+                    if (diffDays < 7) return \`${diffDays} days ago\`;
+                    if (diffDays < 30) return \`${Math.floor(diffDays / 7)} weeks ago\`;
+                    return \`${Math.floor(diffDays / 30)} months ago\`;
                 },
 
                 totalFunding() {
@@ -595,6 +615,90 @@ export const indexHtml = `
                 },
 
                 fundingChart: null,
+                roundChart: null,
+
+                renderRoundChart() {
+                    if (this.deals.length === 0) return;
+                    
+                    // Count deals by round
+                    const roundCounts = {};
+                    const roundOrder = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Series D+', 'Other'];
+                    
+                    this.deals.forEach(deal => {
+                        let round = deal.round || 'Other';
+                        // Normalize round names
+                        if (round.includes('Pre-Seed') || round.includes('Pre Seed')) round = 'Pre-Seed';
+                        else if (round.includes('Seed') && !round.includes('Pre')) round = 'Seed';
+                        else if (round.includes('Series A')) round = 'Series A';
+                        else if (round.includes('Series B')) round = 'Series B';
+                        else if (round.includes('Series C')) round = 'Series C';
+                        else if (round.includes('Series D') || round.includes('Series E') || round.includes('Series F')) round = 'Series D+';
+                        else if (!roundOrder.includes(round)) round = 'Other';
+                        
+                        roundCounts[round] = (roundCounts[round] || 0) + 1;
+                    });
+                    
+                    // Sort by round order and filter out zeros
+                    const labels = roundOrder.filter(r => roundCounts[r] > 0);
+                    const data = labels.map(r => roundCounts[r]);
+                    
+                    const ctx = document.getElementById('roundChart');
+                    if (!ctx) return;
+                    
+                    if (this.roundChart) {
+                        this.roundChart.destroy();
+                    }
+                    
+                    const colors = [
+                        '#a855f7', // Pre-Seed - purple
+                        '#22c55e', // Seed - green
+                        '#3b82f6', // Series A - blue
+                        '#f59e0b', // Series B - amber
+                        '#ef4444', // Series C - red
+                        '#ec4899', // Series D+ - pink
+                        '#6b7280'  // Other - gray
+                    ];
+                    
+                    this.roundChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: data,
+                                backgroundColor: labels.map((_, i) => colors[roundOrder.indexOf(labels[i])] || colors[6]),
+                                borderColor: '#1a1a1a',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '50%',
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'right',
+                                    labels: {
+                                        color: '#9ca3af',
+                                        usePointStyle: true,
+                                        pointStyle: 'circle',
+                                        padding: 12,
+                                        font: { size: 11 }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => {
+                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = ((ctx.raw / total) * 100).toFixed(1);
+                                            return \`${ctx.label}: ${ctx.raw} (${pct}%)\`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
 
                 renderFundingChart() {
                     if (this.deals.length === 0) return;
@@ -603,7 +707,7 @@ export const indexHtml = `
                     const monthlyData = {};
                     this.deals.forEach(deal => {
                         const date = new Date(deal.created_at);
-                        const key = \`\${date.getFullYear()}-\${String(date.getMonth() + 1).padStart(2, '0')}\`;
+                        const key = \`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}\`;
                         if (!monthlyData[key]) {
                             monthlyData[key] = { amount: 0, count: 0 };
                         }
@@ -633,7 +737,7 @@ export const indexHtml = `
                         data: {
                             labels: labels,
                             datasets: [{
-                                label: 'Funding (\$M)',
+                                label: 'Funding ($M)',
                                 data: amounts,
                                 backgroundColor: 'rgba(255, 68, 68, 0.6)',
                                 borderColor: '#ff4444',
@@ -682,7 +786,7 @@ export const indexHtml = `
                                     grid: { color: '#2a2a2a' },
                                     ticks: { 
                                         color: '#ff4444',
-                                        callback: (val) => '\$' + val + 'M'
+                                        callback: (val) => '$' + val + 'M'
                                     },
                                     title: {
                                         display: false
@@ -711,7 +815,7 @@ export const indexHtml = `
                     this.selectedDeal = null;
                     
                     try {
-                        const response = await fetch(\`/api/v1/deals/\${deal.id}\`);
+                        const response = await fetch(\`/api/v1/deals/${deal.id}\`);
                         const data = await response.json();
                         if (data.success) {
                             this.selectedDeal = data.data;
@@ -811,4 +915,4 @@ export const indexHtml = `
         }
     </script>
 </body>
-</html>`;
+</html>`

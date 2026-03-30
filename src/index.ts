@@ -192,6 +192,66 @@ app.get('/api/v1/challenges', async (c) => {
   }
 })
 
+// RSS Feed: latest deals in RSS 2.0 format
+app.get('/feed.xml', async (c) => {
+  try {
+    const db = c.env.DB
+    const { results } = await db.prepare(
+      `SELECT * FROM deals ORDER BY created_at DESC LIMIT 50`
+    ).all() as { results: Array<{
+      id: number
+      company: string
+      round: string
+      amount_usd: number
+      source_url: string | null
+      created_at: string
+    }> }
+    
+    const escapeXml = (str: string) => str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;')
+    
+    const formatAmount = (amount: number) => {
+      if (amount >= 1e9) return `$${(amount / 1e9).toFixed(1)}B`
+      if (amount >= 1e6) return `$${(amount / 1e6).toFixed(1)}M`
+      if (amount >= 1e3) return `$${(amount / 1e3).toFixed(0)}K`
+      return `$${amount}`
+    }
+    
+    const items = (results || []).map((deal) => `
+    <item>
+      <title>${escapeXml(deal.company)} raises ${formatAmount(deal.amount_usd)} (${escapeXml(deal.round)})</title>
+      <link>https://overpriseed.d1.sh/#deal-${deal.id}</link>
+      <guid isPermaLink="false">deal-${deal.id}</guid>
+      <pubDate>${new Date(deal.created_at).toUTCString()}</pubDate>
+      <description>${escapeXml(deal.company)} closed a ${escapeXml(deal.round)} round of ${formatAmount(deal.amount_usd)}.</description>
+    </item>`).join('')
+    
+    const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Overpriseed - Latest Startup Funding Deals</title>
+    <link>https://overpriseed.d1.sh</link>
+    <description>Exposing overvalued startup deals. AI-first analysis of tech funding rounds.</description>
+    <language>en-us</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <atom:link href="https://overpriseed.d1.sh/feed.xml" rel="self" type="application/rss+xml"/>${items}
+  </channel>
+</rss>`
+    
+    return c.body(rss, 200, {
+      'Content-Type': 'application/rss+xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600'
+    })
+  } catch (error) {
+    console.error('Failed to generate RSS feed:', error)
+    return c.text('Failed to generate feed', 500)
+  }
+})
+
 // Leaderboard: deals ranked by average overpriced score
 app.get('/api/v1/leaderboard', async (c) => {
   try {

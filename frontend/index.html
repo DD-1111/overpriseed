@@ -37,7 +37,7 @@
                         <h1 class="text-2xl font-bold text-forum-accent">💸 Overpriseed</h1>
                         <p class="text-sm text-gray-500">Exposing overvalued startup deals</p>
                     </div>
-                    <nav class="flex gap-6">
+                    <nav class="flex gap-6 items-center">
                         <a href="#" @click.prevent="currentView = 'deals'" 
                            :class="currentView === 'deals' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
                            class="font-medium transition-colors">Deals</a>
@@ -47,6 +47,13 @@
                         <a href="#" @click.prevent="currentView = 'leaderboard'" 
                            :class="currentView === 'leaderboard' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
                            class="font-medium transition-colors">Leaderboard</a>
+                        <a href="/feed.xml" target="_blank"
+                           class="text-orange-500 hover:text-orange-400 transition-colors" title="RSS Feed">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                             <circle cx="6.18" cy="17.82" r="2.18"/>
+                             <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/>
+                           </svg>
+                        </a>
                     </nav>
                 </div>
             </div>
