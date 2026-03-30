@@ -39,11 +39,14 @@ export const indexHtml = `
                         <p class="text-sm text-gray-500">Exposing overvalued startup deals</p>
                     </div>
                     <nav class="flex gap-6 items-center">
-                        <a href="#" @click.prevent="currentView = 'deals'" 
-                           :class="currentView === 'deals' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
+                        <a href="#" @click.prevent="currentView = 'deals'"
+                           :class="currentView === 'deals' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'"
                            class="font-medium transition-colors">Deals</a>
-                        <a href="#" @click.prevent="currentView = 'challenges'" 
-                           :class="currentView === 'challenges' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
+                        <a href="#" @click.prevent="currentView = 'bubble'"
+                           :class="currentView === 'bubble' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'"
+                           class="font-medium transition-colors">Bubble</a>
+                        <a href="#" @click.prevent="currentView = 'challenges'"
+                           :class="currentView === 'challenges' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'"
                            class="font-medium transition-colors">Challenges</a>
                         <a href="#" @click.prevent="currentView = 'leaderboard'" 
                            :class="currentView === 'leaderboard' ? 'text-forum-accent' : 'text-forum-text hover:text-forum-accent'" 
@@ -178,6 +181,99 @@ export const indexHtml = `
                     <div x-show="deals.length === 0" class="text-center py-12 text-gray-500">
                         <p>No deals found. Be the first to submit one!</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Bubble Monitor View -->
+            <div x-show="currentView === 'bubble'" x-cloak>
+                <div class="mb-6">
+                    <h2 class="text-xl font-semibold mb-2">AI 泡沫监控</h2>
+                    <p class="text-gray-500">基于融资数据的 AI 行业泡沫风险评估</p>
+                </div>
+
+                <!-- Summary Stats -->
+                <div x-show="deals.length > 0" class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
+                        <p class="text-3xl font-bold text-red-400" x-text="bubbleCards.filter(c => c.health === '投机融资').length"></p>
+                        <p class="text-sm text-gray-500 mt-1">投机融资</p>
+                    </div>
+                    <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
+                        <p class="text-3xl font-bold text-yellow-400" x-text="bubbleCards.filter(c => c.health === '现金流支撑').length"></p>
+                        <p class="text-sm text-gray-500 mt-1">现金流支撑</p>
+                    </div>
+                    <div class="bg-forum-card border border-forum-border rounded-lg p-4 text-center">
+                        <p class="text-3xl font-bold text-green-400" x-text="bubbleCards.filter(c => c.health === '稳健融资').length"></p>
+                        <p class="text-sm text-gray-500 mt-1">稳健融资</p>
+                    </div>
+                </div>
+
+                <!-- Layer Filter -->
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <button @click="bubbleFilter = ''"
+                            :class="bubbleFilter === '' ? 'bg-forum-accent text-white border-forum-accent' : 'bg-forum-card text-gray-400 hover:text-white border-forum-border'"
+                            class="px-3 py-1.5 rounded-lg text-sm border transition-colors">全部</button>
+                    <button @click="bubbleFilter = 'Application'"
+                            :class="bubbleFilter === 'Application' ? 'bg-blue-500/30 text-blue-400 border-blue-500/50' : 'bg-forum-card text-gray-400 hover:text-blue-400 border-forum-border'"
+                            class="px-3 py-1.5 rounded-lg text-sm border transition-colors">应用层</button>
+                    <button @click="bubbleFilter = 'Model'"
+                            :class="bubbleFilter === 'Model' ? 'bg-purple-500/30 text-purple-400 border-purple-500/50' : 'bg-forum-card text-gray-400 hover:text-purple-400 border-forum-border'"
+                            class="px-3 py-1.5 rounded-lg text-sm border transition-colors">模型层</button>
+                    <button @click="bubbleFilter = 'Infrastructure'"
+                            :class="bubbleFilter === 'Infrastructure' ? 'bg-orange-500/30 text-orange-400 border-orange-500/50' : 'bg-forum-card text-gray-400 hover:text-orange-400 border-forum-border'"
+                            class="px-3 py-1.5 rounded-lg text-sm border transition-colors">基础设施</button>
+                </div>
+
+                <!-- Card Grid -->
+                <div x-show="!loading && deals.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <template x-for="card in filteredBubbleCards" :key="card.id">
+                        <div @click="openDealModal(card)"
+                             class="bg-forum-card border border-forum-border rounded-lg p-3 hover:border-forum-accent/50 transition-all cursor-pointer group">
+                            <!-- Company Name -->
+                            <h4 class="text-sm font-semibold text-white truncate mb-2" x-text="card.company"></h4>
+
+                            <!-- Badges -->
+                            <div class="flex flex-wrap gap-1 mb-3">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                                      :class="card.layerColor === 'blue' ? 'bg-blue-500/20 text-blue-400' : card.layerColor === 'purple' ? 'bg-purple-500/20 text-purple-400' : 'bg-orange-500/20 text-orange-400'"
+                                      x-text="card.layerLabel"></span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                                      :class="card.healthColor === 'green' ? 'bg-green-500/20 text-green-400' : card.healthColor === 'yellow' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'"
+                                      x-text="card.health"></span>
+                            </div>
+
+                            <!-- Metrics -->
+                            <div class="space-y-1 text-xs text-gray-500">
+                                <div class="flex justify-between">
+                                    <span>现金流</span>
+                                    <span class="text-white font-medium" x-text="card.runway + ' mo'"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>泡沫指数</span>
+                                    <span class="font-bold"
+                                          :class="card.bubbleMultiple >= 3 ? 'text-red-400' : card.bubbleMultiple >= 1.5 ? 'text-yellow-400' : 'text-green-400'"
+                                          x-text="card.bubbleMultiple + 'x'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Amount -->
+                            <div class="mt-2 pt-2 border-t border-forum-border">
+                                <p class="text-[10px] text-gray-600" x-text="card.round"></p>
+                                <p class="text-sm font-bold text-forum-accent" x-text="'$' + formatNumber(card.amount_usd)"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Empty -->
+                <div x-show="!loading && deals.length === 0" class="text-center py-12 text-gray-500">
+                    <p class="text-4xl mb-4">&#x1FAE7;</p>
+                    <p>No deals to monitor yet.</p>
+                </div>
+
+                <!-- Loading -->
+                <div x-show="loading" class="text-center py-12">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-forum-accent"></div>
+                    <p class="mt-2 text-gray-500">Loading bubble data...</p>
                 </div>
             </div>
 
@@ -523,6 +619,65 @@ export const indexHtml = `
                 },
                 leaderboardData: [],
                 leaderboardLoading: false,
+                bubbleFilter: '',
+
+                normalizeRound(round) {
+                    if (round.includes('Pre-Seed') || round.includes('Pre Seed')) return 'Pre-Seed';
+                    if (round.includes('Seed')) return 'Seed';
+                    if (round.includes('Series A')) return 'Series A';
+                    if (round.includes('Series B')) return 'Series B';
+                    if (round.includes('Series C') || round.includes('Series D') || round.includes('Series E') || round.includes('Series F')) return 'Series C';
+                    return 'Seed';
+                },
+
+                get bubbleCards() {
+                    const thresholds = {
+                        'Pre-Seed': { normal: 5000000, speculative: 15000000, burn: 80000, median: 2000000 },
+                        'Seed': { normal: 15000000, speculative: 40000000, burn: 250000, median: 8000000 },
+                        'Series A': { normal: 50000000, speculative: 120000000, burn: 800000, median: 25000000 },
+                        'Series B': { normal: 150000000, speculative: 400000000, burn: 2500000, median: 80000000 },
+                        'Series C': { normal: 500000000, speculative: 1000000000, burn: 7000000, median: 250000000 }
+                    };
+
+                    return this.deals.map(deal => {
+                        const amount = deal.amount_usd || 0;
+                        const roundKey = this.normalizeRound(deal.round || '');
+                        const t = thresholds[roundKey];
+
+                        let layer, layerLabel, layerColor;
+                        if (amount > 200000000) {
+                            layer = 'Infrastructure'; layerLabel = '基础设施'; layerColor = 'orange';
+                        } else if (amount > 50000000) {
+                            layer = 'Model'; layerLabel = '模型层'; layerColor = 'purple';
+                        } else {
+                            layer = 'Application'; layerLabel = '应用层'; layerColor = 'blue';
+                        }
+
+                        let health, healthColor;
+                        if (amount > t.speculative) {
+                            health = '投机融资'; healthColor = 'red';
+                        } else if (amount > t.normal) {
+                            health = '现金流支撑'; healthColor = 'yellow';
+                        } else {
+                            health = '稳健融资'; healthColor = 'green';
+                        }
+
+                        const runway = Math.min(Math.round(amount / t.burn), 99);
+                        const bubbleMultiple = (amount / t.median).toFixed(1);
+
+                        return {
+                            ...deal,
+                            layer, layerLabel, layerColor,
+                            health, healthColor,
+                            runway, bubbleMultiple
+                        };
+                    });
+                },
+
+                get filteredBubbleCards() {
+                    if (!this.bubbleFilter) return this.bubbleCards;
+                    return this.bubbleCards.filter(c => c.layer === this.bubbleFilter);
+                },
 
                 get filteredDeals() {
                     let result = [...this.deals];
