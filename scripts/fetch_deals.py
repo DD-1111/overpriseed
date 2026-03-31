@@ -148,6 +148,45 @@ def parse_amount(value) -> int:
     return 0
 
 
+def is_valid_company_name(name: str) -> bool:
+    """验证是否为有效的公司名"""
+    name = name.strip()
+    
+    # 长度检查
+    if len(name) < 2 or len(name) > 40:
+        return False
+    
+    # 词数检查（超过4个词很可能是句子片段）
+    words = name.split()
+    if len(words) > 4:
+        return False
+    
+    # 黑名单模式
+    blacklist_patterns = [
+        r'^(Big|Biggest|Former|Legal|Defense|Other|Series|Round|Funding|Unknown|Notable)$',
+        r'^(M|K|B)\s',  # "M legal", "B for"
+        r'^\d',  # 以数字开头
+        r'^(a|an|the|for|and|or|with|from|to|in)\s',  # 以介词开头
+        r'\n',  # 包含换行
+        r'billion|million',  # 包含金额词
+        r'notable|activity|details|rounds',  # 描述性词汇
+        r'^[a-z]',  # 以小写字母开头（除非是知名缩写）
+        r'\s(and|or|for|with|from|to|in|of|the|a|an)\s',  # 中间有常见介词
+        r'startups?|companies?|raised|funding',  # 融资相关词汇
+        r'^(AI|ML|NLP|US)\s\w+$',  # "AI wrapper" 等通用描述
+        r'wrapper',  # wrapper 不是公司名
+        r'enterprise\s*(health|AI)?$',  # "enterprise health"
+        r'Horowitz',  # 投资人名字
+        r'grated|integrated',  # 句子片段
+    ]
+    
+    for pattern in blacklist_patterns:
+        if re.search(pattern, name, re.IGNORECASE):
+            return False
+    
+    return True
+
+
 def parse_funding_news_regex(text: str) -> List[Dict]:
     """回退方案：用正则解析融资新闻"""
     deals = []
@@ -166,9 +205,8 @@ def parse_funding_news_regex(text: str) -> List[Dict]:
         for match in matches:
             company = match[0].strip()
             
-            # 过滤掉明显不是公司名的
-            skip_words = ['the', 'a', 'an', 'this', 'that', 'according', 'report', 'analysis', 'funding']
-            if company.lower() in skip_words or len(company) < 3 or len(company) > 50:
+            # 使用改进的验证函数
+            if not is_valid_company_name(company):
                 continue
             
             amount = float(match[1])
