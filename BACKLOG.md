@@ -104,6 +104,15 @@
 
 ## 进度记录
 
+### 2026-04-01 (早上 6:00)
+- **数据库清理**：清理脏数据
+  - 新增 `scripts/clean_deals.py` 清理脚本
+  - 新增 `clean-deals.yml` workflow（每周一自动运行 + 手动触发）
+  - 清理 37 条脏数据（句子片段、非公司名等）
+  - 改进 `fetch_deals.py` 的 `is_valid_company_name()` 验证函数
+  - 添加黑名单模式：介词开头、投资人名字、金额词汇等
+  - 数据从 59 条 → 22 条有效 deals
+
 ### 2026-04-01 (凌晨 3:00)
 - **自动行业分类**：完成遗留任务
   - 将 `classify_industry.py` 添加到 `fetch-deals.yml` workflow
