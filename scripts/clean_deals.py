@@ -122,8 +122,11 @@ def fetch_all_deals() -> List[Dict]:
 
 
 def delete_deal(deal_id: int) -> bool:
-    """删除一条 deal"""
+    """删除一条 deal（包括关联的 analyses）"""
     try:
+        # 先删除关联的 analyses
+        query_d1("DELETE FROM analyses WHERE deal_id = ?", [deal_id])
+        # 再删除 deal
         query_d1("DELETE FROM deals WHERE id = ?", [deal_id])
         return True
     except Exception as e:
