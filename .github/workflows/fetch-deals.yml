@@ -50,6 +50,15 @@ jobs:
           echo "📡 Fetching TechCrunch RSS..."
           python scripts/fetch_techcrunch.py --days 3
       
+      - name: Classify industries
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: |
+          echo "🏭 Classifying deal industries..."
+          python scripts/classify_industry.py
+      
       - name: Auto-analyze new deals
         env:
           PERPLEXITY_SESSION_TOKEN: ${{ secrets.PERPLEXITY_SESSION_TOKEN }}
