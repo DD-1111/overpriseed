@@ -252,6 +252,33 @@ app.get('/feed.xml', async (c) => {
   }
 })
 
+// Industry distribution stats
+app.get('/api/v1/stats/industries', async (c) => {
+  try {
+    const db = c.env.DB
+    const { results } = await db.prepare(`
+      SELECT 
+        COALESCE(industry, 'Other') as industry,
+        COUNT(*) as count,
+        SUM(amount_usd) as total_funding
+      FROM deals
+      GROUP BY COALESCE(industry, 'Other')
+      ORDER BY count DESC
+    `).all()
+    
+    return c.json({ 
+      success: true,
+      data: results 
+    })
+  } catch (error) {
+    console.error('Failed to fetch industry stats:', error)
+    return c.json({ 
+      success: false,
+      error: 'Failed to fetch industry stats' 
+    }, 500)
+  }
+})
+
 // Leaderboard: deals ranked by average overpriced score
 app.get('/api/v1/leaderboard', async (c) => {
   try {

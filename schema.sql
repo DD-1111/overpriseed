@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS deals (
     round VARCHAR(50) NOT NULL,
     amount_usd BIGINT NOT NULL,
     source_url TEXT,
+    industry VARCHAR(50) DEFAULT 'Other',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

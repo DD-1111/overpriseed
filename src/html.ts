@@ -111,7 +111,7 @@ export const indexHtml = `
                 </div>
 
                 <!-- Charts Grid -->
-                <div x-show="!loading && deals.length > 0" x-init="$watch('deals', () => { renderFundingChart(); renderRoundChart(); })" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+                <div x-show="!loading && deals.length > 0" x-init="$watch('deals', () => { renderFundingChart(); renderRoundChart(); fetchIndustryStats(); })" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
                     <!-- Funding Trend Chart -->
                     <div class="lg:col-span-2 bg-forum-card border border-forum-border rounded-lg p-4">
                         <h3 class="text-sm font-medium text-gray-400 mb-3">📈 Monthly Funding Trend</h3>
@@ -124,6 +124,13 @@ export const indexHtml = `
                         <h3 class="text-sm font-medium text-gray-400 mb-3">🎯 Round Distribution</h3>
                         <div class="h-48">
                             <canvas id="roundChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Industry Distribution Chart -->
+                    <div class="lg:col-span-3 bg-forum-card border border-forum-border rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-400 mb-3">🏭 Industry Distribution</h3>
+                        <div class="h-48">
+                            <canvas id="industryChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -727,6 +734,7 @@ export const indexHtml = `
                             this.$nextTick(() => {
                                 this.renderFundingChart();
                                 this.renderRoundChart();
+                                this.fetchIndustryStats();
                             });
                         } else {
                             throw new Error(data.error || 'Failed to fetch deals');
@@ -958,6 +966,104 @@ export const indexHtml = `
                                     title: {
                                         display: false
                                     }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                industryStats: [],
+                industryChart: null,
+
+                async fetchIndustryStats() {
+                    try {
+                        const response = await fetch('/api/v1/stats/industries');
+                        const data = await response.json();
+                        if (data.success) {
+                            this.industryStats = data.data || [];
+                            this.$nextTick(() => this.renderIndustryChart());
+                        }
+                    } catch (err) {
+                        console.error('Error fetching industry stats:', err);
+                    }
+                },
+
+                renderIndustryChart() {
+                    if (this.industryStats.length === 0) return;
+                    
+                    const ctx = document.getElementById('industryChart');
+                    if (!ctx) return;
+                    
+                    if (this.industryChart) {
+                        this.industryChart.destroy();
+                    }
+                    
+                    // Sort by count and limit to top 8 + Other
+                    const sorted = [...this.industryStats].sort((a, b) => b.count - a.count);
+                    const top = sorted.slice(0, 8);
+                    const otherCount = sorted.slice(8).reduce((sum, i) => sum + i.count, 0);
+                    if (otherCount > 0) {
+                        const existingOther = top.find(i => i.industry === 'Other');
+                        if (existingOther) {
+                            existingOther.count += otherCount;
+                        } else {
+                            top.push({ industry: 'Other', count: otherCount });
+                        }
+                    }
+                    
+                    const labels = top.map(i => i.industry);
+                    const data = top.map(i => i.count);
+                    
+                    const colors = [
+                        '#ef4444', // red - Healthcare
+                        '#f97316', // orange - Developer Tools
+                        '#eab308', // yellow - Enterprise
+                        '#22c55e', // green - Security
+                        '#14b8a6', // teal - Fintech
+                        '#3b82f6', // blue - Robotics
+                        '#8b5cf6', // violet - Agents
+                        '#ec4899', // pink - Creative
+                        '#6b7280'  // gray - Other
+                    ];
+                    
+                    this.industryChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: data,
+                                backgroundColor: colors.slice(0, labels.length),
+                                borderColor: '#1a1a1a',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => {
+                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = ((ctx.raw / total) * 100).toFixed(1);
+                                            return \`\${ctx.raw} deals (\${pct}%)\`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: '#2a2a2a' },
+                                    ticks: { color: '#9ca3af' }
+                                },
+                                y: {
+                                    grid: { display: false },
+                                    ticks: { color: '#e0e0e0', font: { size: 11 } }
                                 }
                             }
                         }
