@@ -846,7 +846,7 @@ export const indexHtml = `
                                         label: (ctx) => {
                                             const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                                             const pct = ((ctx.raw / total) * 100).toFixed(1);
-                                            return \`${ctx.label}: ${ctx.raw} (${pct}%)\`;
+                                            return \`\${ctx.label}: \${ctx.raw} (\${pct}%)\`;
                                         }
                                     }
                                 }
@@ -862,7 +862,7 @@ export const indexHtml = `
                     const monthlyData = {};
                     this.deals.forEach(deal => {
                         const date = new Date(deal.created_at);
-                        const key = \`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}\`;
+                        const key = \`\${date.getFullYear()}-\${String(date.getMonth() + 1).padStart(2, '0')}\`;
                         if (!monthlyData[key]) {
                             monthlyData[key] = { amount: 0, count: 0 };
                         }
@@ -970,7 +970,7 @@ export const indexHtml = `
                     this.selectedDeal = null;
                     
                     try {
-                        const response = await fetch(\`/api/v1/deals/${deal.id}\`);
+                        const response = await fetch(\`/api/v1/deals/\${deal.id}\`);
                         const data = await response.json();
                         if (data.success) {
                             this.selectedDeal = data.data;
