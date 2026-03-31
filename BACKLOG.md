@@ -63,7 +63,7 @@
 ### 9. 数据可视化
 - [x] 融资金额趋势图 ✅ (2026-03-30)
 - [x] 融资轮次分布饼图 ✅ (2026-03-30)
-- [ ] 行业分布饼图（需先添加 industry 字段）
+- [x] 行业分布饼图 ✅ (2026-03-31)
 - [x] Overpriced Score 排行榜 ✅ (2026-03-29)
 
 ---
@@ -103,6 +103,16 @@
 ---
 
 ## 进度记录
+
+### 2026-03-31 (中午 12:00)
+- **行业分布图**：P2-9 完成
+  - 新增 `industry` 字段到 deals 表 (migration 002)
+  - 新增 `/api/v1/stats/industries` endpoint
+  - 新增横向柱状图显示各行业 deal 数量
+  - 新增 `scripts/classify_industry.py` 自动分类脚本
+  - 新增 GitHub Actions `migrate.yml` 自动执行迁移
+  - 分类规则：Healthcare/Developer Tools/Enterprise/Security/Fintech/Robotics/Agents/Creative/Data & Analytics/NLP & Search/Vision
+  - ⚠️ 待办：需要运行 classify_industry.py 或添加到 Actions 中自动分类
 
 ### 2026-03-31 (早上 6:00)
 - **NEW 标签功能**：新增功能
