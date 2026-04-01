@@ -104,6 +104,16 @@
 
 ## 进度记录
 
+### 2026-04-01 (中午 12:00)
+- **行业分类优化**：消除所有 "Other" 类别
+  - 新增 "AI Infrastructure" 类别（OpenAI 等基础模型公司）
+  - 新增 "Defense & Aerospace" 类别（Shield AI, Aetherflux 等）
+  - 重命名：Robotics → Robotics & Hardware, Creative → Creative & Content
+  - 添加 50+ 新关键词覆盖更多场景
+  - 改进分类逻辑：同时分析公司名 + source_url 关键词
+  - 重新分类 18 个 deals：Other → 9 个不同行业
+  - ✅ 线上验证：当前 20 个 deals 全部有明确行业分类
+
 ### 2026-04-01 (早上 6:00)
 - **数据库清理**：清理脏数据
   - 新增 `scripts/clean_deals.py` 清理脚本
