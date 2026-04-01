@@ -21,47 +21,68 @@ INDUSTRY_RULES = {
     'Healthcare': [
         'health', 'medical', 'biotech', 'pharma', 'drug', 'clinical',
         'patient', 'hospital', 'diagnostic', 'therapy', 'therapeutic',
-        'genomic', 'disease', 'healthcare', 'wellness', 'mental health'
+        'genomic', 'disease', 'healthcare', 'wellness', 'mental health',
+        'qualified health'
     ],
     'Developer Tools': [
         'developer', 'code', 'coding', 'sdk', 'api', 'devops', 'ci/cd',
         'github', 'git', 'ide', 'programming', 'software development',
-        'infrastructure', 'platform', 'database', 'serverless'
+        'database', 'serverless', 'verification', 'testing', 'debug',
+        'kubernetes', 'k8s', 'container', 'docker', 'terraform',
+        'build', 'deploy', 'qodo', 'scaleops', 'builder.ai'
+    ],
+    'AI Infrastructure': [
+        'openai', 'anthropic', 'llm', 'foundation model', 'gpu', 'tpu',
+        'inference', 'training', 'compute', 'cluster', 'model serving',
+        'ml ops', 'mlops', 'ai infrastructure', 'ai platform'
     ],
     'Enterprise': [
         'enterprise', 'b2b', 'saas', 'crm', 'erp', 'workflow',
         'productivity', 'collaboration', 'business', 'corporate',
-        'management', 'operations', 'hr', 'recruiting', 'sales'
+        'management', 'operations', 'hr', 'recruiting', 'sales',
+        'construction', 'real estate', 'trayd', 'doss'
     ],
     'Security': [
         'security', 'cybersecurity', 'infosec', 'identity', 'auth',
         'encryption', 'privacy', 'compliance', 'fraud', 'threat',
-        'vulnerability', 'penetration', 'firewall', 'soc'
+        'vulnerability', 'penetration', 'firewall', 'soc', 'oasis security',
+        'conntour', 'surveillance'
     ],
     'Fintech': [
         'finance', 'fintech', 'banking', 'payment', 'lending', 'credit',
         'insurance', 'insuretech', 'crypto', 'blockchain', 'defi',
         'trading', 'investment', 'wealth', 'accounting'
     ],
-    'Robotics': [
+    'Defense & Aerospace': [
+        'defense', 'defence', 'military', 'aerospace', 'satellite',
+        'space', 'shield ai', 'aetherflux', 'missile', 'weapon',
+        'national security', 'government', 'dod'
+    ],
+    'Robotics & Hardware': [
         'robot', 'robotic', 'autonomous', 'drone', 'automation',
-        'manufacturing', 'industrial', 'warehouse', 'logistics'
+        'manufacturing', 'industrial', 'warehouse', 'logistics',
+        'hardware', 'chip', 'semiconductor', 'cooling', 'frore',
+        'sensor', 'device', 'av', 'self-driving', 'nomadic'
     ],
     'Agents': [
         'agent', 'agentic', 'autonomous agent', 'ai agent', 'copilot',
-        'assistant', 'chatbot', 'conversational'
+        'assistant', 'chatbot', 'conversational', 'cluely'
     ],
-    'Creative': [
+    'Creative & Content': [
         'image', 'video', 'audio', 'music', 'art', 'design', 'creative',
-        'content', 'media', 'animation', 'vfx', 'gaming', 'game'
+        'content', 'media', 'animation', 'vfx', 'gaming', 'game',
+        'writer', 'writing', 'copy', 'marketing', 'advertising',
+        'highlight ai', 'highlight'
     ],
     'Data & Analytics': [
         'data', 'analytics', 'bi', 'visualization', 'warehouse',
-        'etl', 'pipeline', 'observability', 'monitoring', 'logging'
+        'etl', 'pipeline', 'observability', 'monitoring', 'logging',
+        'manifold', 'intelligence', 'insight'
     ],
     'NLP & Search': [
         'nlp', 'search', 'language', 'text', 'document', 'translation',
-        'semantic', 'embedding', 'rag', 'retrieval', 'knowledge'
+        'semantic', 'embedding', 'rag', 'retrieval', 'knowledge',
+        'serval'
     ],
     'Vision': [
         'vision', 'image recognition', 'ocr', 'object detection',
@@ -73,9 +94,16 @@ INDUSTRY_RULES = {
 DEFAULT_INDUSTRY = 'Other'
 
 
-def classify_industry(company: str, description: str = '') -> str:
-    """根据公司名和描述分类行业"""
-    text = f"{company} {description}".lower()
+def classify_industry(company: str, description: str = '', source_url: str = '') -> str:
+    """根据公司名、描述和来源 URL 分类行业
+    
+    source_url 通常包含有用的关键词，例如：
+    - techcrunch.com/.../kubernetes-efficiency... → Developer Tools
+    - techcrunch.com/.../security-video... → Security
+    """
+    # 清理 URL 中的特殊字符，转为空格分隔的词
+    url_text = source_url.replace('-', ' ').replace('_', ' ').replace('/', ' ')
+    text = f"{company} {description} {url_text}".lower()
     
     for industry, keywords in INDUSTRY_RULES.items():
         for keyword in keywords:
@@ -168,9 +196,10 @@ def main():
             company = deal.get('company', '')
             deal_id = deal.get('id')
             old_industry = deal.get('industry', 'None')
+            source_url = deal.get('source_url', '')
             
-            # 分类
-            industry = classify_industry(company)
+            # 分类（使用公司名 + source URL 的关键词）
+            industry = classify_industry(company, source_url=source_url)
             stats[industry] = stats.get(industry, 0) + 1
             
             if industry != old_industry:
