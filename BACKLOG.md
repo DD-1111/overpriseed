@@ -58,7 +58,7 @@
 ### 8. 更多数据源
 - [x] 接入 TechCrunch RSS ✅ (2026-03-29)
 - [ ] 接入 Crunchbase API（如果有免费额度）
-- [ ] 接入 Twitter/X 融资新闻
+- [x] 接入 Twitter/X 融资新闻 ✅ (2026-04-02) — 手动工具，需要浏览器 cookies
 
 ### 9. 数据可视化
 - [x] 融资金额趋势图 ✅ (2026-03-30)
@@ -103,6 +103,17 @@
 ---
 
 ## 进度记录
+
+### 2026-04-02 (中午 12:00)
+- **Twitter/X 融资新闻抓取**：P2-8 补充完成
+  - 新增 `scripts/fetch_twitter.py`
+  - 使用 bird CLI 搜索 Twitter
+  - 5 个搜索查询组合覆盖不同融资关键词
+  - 黑名单过滤：新闻账号、国家名、通用词
+  - 跳过估值讨论，只捕获实际融资
+  - 支持环境变量认证（TWITTER_AUTH_TOKEN, TWITTER_CT0）
+  - ⚠️ 手动工具：cookies 会过期，不适合 CI 自动化
+  - 用法：`python3 scripts/fetch_twitter.py --dry-run`
 
 ### 2026-04-01 (中午 12:00)
 - **行业分类优化**：消除所有 "Other" 类别
