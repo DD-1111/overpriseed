@@ -118,9 +118,54 @@ Focus on what an AI agent would need to know to evaluate or replicate this produ
 
     result = search_perplexity(prompt)
     
-    # Extract JSON from response
+    # Extract JSON from response - try multiple strategies
+    import re
+    
+    # Strategy 1: Find ```json ... ``` block
+    json_block_match = re.search(r'```json\s*([\s\S]*?)\s*```', result)
+    if json_block_match:
+        try:
+            return json.loads(json_block_match.group(1))
+        except json.JSONDecodeError:
+            pass
+    
+    # Strategy 2: Find outermost { ... } with balanced braces
+    def find_balanced_json(text):
+        start = text.find('{')
+        if start == -1:
+            return None
+        depth = 0
+        in_string = False
+        escape = False
+        for i, c in enumerate(text[start:], start):
+            if escape:
+                escape = False
+                continue
+            if c == '\\':
+                escape = True
+                continue
+            if c == '"' and not escape:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if c == '{':
+                depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    return text[start:i+1]
+        return None
+    
+    json_str = find_balanced_json(result)
+    if json_str:
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            pass
+    
+    # Strategy 3: Simple regex fallback
     try:
-        import re
         json_match = re.search(r'\{[\s\S]*\}', result)
         if json_match:
             return json.loads(json_match.group())
