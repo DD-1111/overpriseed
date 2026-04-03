@@ -284,6 +284,206 @@ app.get('/api/v1/stats/industries', async (c) => {
   }
 })
 
+// ============================================
+// MCP (Model Context Protocol) Endpoints
+// Agent-native interface for AI assistants
+// ============================================
+
+// MCP Manifest - describes capabilities for AI agents
+app.get('/mcp/manifest', (c) => {
+  return c.json({
+    name: "overpriseed",
+    version: "2.0.0",
+    description: "AI-first analysis platform for evaluating startup funding deals. Helps agents understand what startups do, estimate replication effort, and assess overvaluation risk.",
+    capabilities: {
+      deals: {
+        list: "GET /mcp/deals - List all analyzed startup deals",
+        get: "GET /mcp/deals/:id - Get detailed analysis of a specific deal",
+        search: "GET /mcp/deals?q=search_term - Search deals by company name"
+      },
+      analysis: {
+        fields: [
+          "description - What the company does",
+          "target_users - Who uses this product",
+          "core_features - Main product features (JSON array)",
+          "tech_stack - Technologies needed to build (JSON object)",
+          "mvp_effort_days - Person-days to build MVP",
+          "ai_replaceability - How easily AI can replicate (1-10)",
+          "moat_assessment - Competitive advantages"
+        ]
+      }
+    },
+    use_cases: [
+      "Evaluate if a startup's valuation is justified",
+      "Estimate effort to replicate a product",
+      "Identify AI-vulnerable business models",
+      "Research competitive landscape"
+    ],
+    rate_limits: {
+      requests_per_minute: 60,
+      note: "No authentication required"
+    }
+  })
+})
+
+// MCP Deals List - structured for AI consumption
+app.get('/mcp/deals', async (c) => {
+  try {
+    const db = c.env.DB
+    const query = c.req.query('q')
+    const analyzed_only = c.req.query('analyzed') === 'true'
+    const limit = Math.min(parseInt(c.req.query('limit') || '50'), 100)
+    
+    let sql = `
+      SELECT 
+        id, company, round, amount_usd, industry,
+        description, target_users, core_features, tech_stack,
+        mvp_effort_days, ai_summary, website_url, source_url,
+        created_at, analyzed_at
+      FROM deals
+      WHERE 1=1
+    `
+    const params: any[] = []
+    
+    if (query) {
+      sql += ` AND company LIKE ?`
+      params.push(`%${query}%`)
+    }
+    
+    if (analyzed_only) {
+      sql += ` AND ai_summary IS NOT NULL`
+    }
+    
+    sql += ` ORDER BY created_at DESC LIMIT ?`
+    params.push(limit)
+    
+    const stmt = params.length > 0 
+      ? db.prepare(sql).bind(...params)
+      : db.prepare(sql)
+    
+    const { results } = await stmt.all()
+    
+    // Parse JSON fields
+    const deals = (results || []).map((deal: any) => ({
+      ...deal,
+      core_features: deal.core_features ? JSON.parse(deal.core_features) : [],
+      tech_stack: deal.tech_stack ? JSON.parse(deal.tech_stack) : {}
+    }))
+    
+    return c.json({
+      _mcp: {
+        schema: "overpriseed/deals/v1",
+        total: deals.length,
+        hint: "Use /mcp/deals/:id for full analysis including community scores"
+      },
+      deals
+    })
+  } catch (error) {
+    console.error('MCP deals error:', error)
+    return c.json({ error: 'Failed to fetch deals' }, 500)
+  }
+})
+
+// MCP Single Deal - complete analysis for AI agents
+app.get('/mcp/deals/:id', async (c) => {
+  try {
+    const db = c.env.DB
+    const id = c.req.param('id')
+    
+    // Get deal with all fields
+    const deal = await db.prepare(`
+      SELECT 
+        id, company, round, amount_usd, industry,
+        description, target_users, core_features, tech_stack,
+        mvp_effort_days, ai_summary, website_url, source_url,
+        created_at, analyzed_at
+      FROM deals WHERE id = ?
+    `).bind(id).first() as any
+    
+    if (!deal) {
+      return c.json({ error: 'Deal not found' }, 404)
+    }
+    
+    // Get community analyses
+    const { results: analyses } = await db.prepare(`
+      SELECT 
+        author, content, overpriced_score, tech_complexity,
+        ai_replaceability, moat_assessment, created_at
+      FROM analyses WHERE deal_id = ?
+      ORDER BY created_at DESC
+    `).bind(id).all()
+    
+    // Calculate aggregate scores
+    const scores = (analyses || []).reduce((acc: any, a: any) => {
+      if (a.overpriced_score) acc.overpriced.push(a.overpriced_score)
+      if (a.tech_complexity) acc.tech_complexity.push(a.tech_complexity)
+      if (a.ai_replaceability) acc.ai_replaceability.push(a.ai_replaceability)
+      if (a.moat_assessment) acc.moat.push(a.moat_assessment)
+      return acc
+    }, { overpriced: [], tech_complexity: [], ai_replaceability: [], moat: [] })
+    
+    const avg = (arr: number[]) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 10) / 10 : null
+    
+    // Build replication guide
+    const tech_stack = deal.tech_stack ? JSON.parse(deal.tech_stack) : {}
+    const core_features = deal.core_features ? JSON.parse(deal.core_features) : []
+    
+    return c.json({
+      _mcp: {
+        schema: "overpriseed/deal/v1",
+        hint: "Use this data to understand what the startup does and how to replicate it"
+      },
+      deal: {
+        id: deal.id,
+        company: deal.company,
+        round: deal.round,
+        amount_usd: deal.amount_usd,
+        amount_formatted: formatAmount(deal.amount_usd),
+        industry: deal.industry,
+        website_url: deal.website_url,
+        source_url: deal.source_url,
+        created_at: deal.created_at
+      },
+      analysis: {
+        description: deal.description,
+        target_users: deal.target_users,
+        core_features,
+        ai_summary: deal.ai_summary,
+        analyzed_at: deal.analyzed_at
+      },
+      replication_guide: {
+        mvp_effort_days: deal.mvp_effort_days,
+        tech_stack,
+        estimated_team: deal.mvp_effort_days ? `${Math.ceil(deal.mvp_effort_days / 30)} engineers for ~1 month` : null
+      },
+      community_scores: {
+        analysis_count: analyses?.length || 0,
+        avg_overpriced: avg(scores.overpriced),
+        avg_tech_complexity: avg(scores.tech_complexity),
+        avg_ai_replaceability: avg(scores.ai_replaceability),
+        avg_moat: avg(scores.moat)
+      },
+      community_analyses: analyses || []
+    })
+  } catch (error) {
+    console.error('MCP deal error:', error)
+    return c.json({ error: 'Failed to fetch deal' }, 500)
+  }
+})
+
+// Helper function for amount formatting
+function formatAmount(amount: number): string {
+  if (!amount) return 'Undisclosed'
+  if (amount >= 1e9) return `$${(amount / 1e9).toFixed(1)}B`
+  if (amount >= 1e6) return `$${(amount / 1e6).toFixed(1)}M`
+  if (amount >= 1e3) return `$${(amount / 1e3).toFixed(0)}K`
+  return `$${amount}`
+}
+
+// ============================================
+// Original API Endpoints
+// ============================================
+
 // Leaderboard: deals ranked by average overpriced score
 app.get('/api/v1/leaderboard', async (c) => {
   try {

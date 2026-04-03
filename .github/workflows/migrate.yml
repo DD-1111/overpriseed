@@ -1,11 +1,12 @@
-name: Run D1 Migrations
+name: Run D1 Migration
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'migrations/**'
   workflow_dispatch:
+    inputs:
+      migration_sql:
+        description: 'SQL to execute'
+        required: true
+        type: string
 
 jobs:
   migrate:
@@ -16,17 +17,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      
+          node-version: '20'
+          
       - name: Install wrangler
-        run: npm install -g wrangler@latest
-      
-      - name: Run migrations
+        run: npm install -g wrangler
+        
+      - name: Run migration
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          for migration in migrations/*.sql; do
-            echo "Running: $migration"
-            wrangler d1 execute overpriseed-db --file="$migration" --remote || true
-          done
+          wrangler d1 execute overpriseed-db --remote --command "${{ inputs.migration_sql }}"
