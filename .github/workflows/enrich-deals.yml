@@ -34,7 +34,8 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install requests perplexity-ai
+          pip install requests
+          pip install git+https://github.com/helallao/perplexity-ai.git
       
       - name: Enrich deals
         env:
