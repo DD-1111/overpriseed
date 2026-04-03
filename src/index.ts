@@ -58,13 +58,21 @@ app.get('/api/v1/deals/:id', async (c) => {
     const db = c.env.DB
     const id = c.req.param('id')
     
-    // Get deal
+    // Get deal with all fields
     const deal = await db.prepare(
       `SELECT * FROM deals WHERE id = ?`
-    ).bind(id).first()
+    ).bind(id).first() as any
     
     if (!deal) {
       return c.json({ success: false, error: 'Deal not found' }, 404)
+    }
+    
+    // Parse JSON fields
+    if (deal.core_features) {
+      try { deal.core_features = JSON.parse(deal.core_features) } catch (e) { deal.core_features = [] }
+    }
+    if (deal.tech_stack) {
+      try { deal.tech_stack = JSON.parse(deal.tech_stack) } catch (e) { deal.tech_stack = {} }
     }
     
     // Get analyses for this deal

@@ -424,6 +424,134 @@ export const indexHtml = `
                         </div>
                     </div>
 
+                    <!-- AI Analysis & Replication Guide (if available) -->
+                    <div x-show="selectedDeal?.description || selectedDeal?.ai_summary" class="p-6 border-b border-forum-border">
+                        <!-- View Toggle -->
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold flex items-center gap-2">
+                                <span>🤖 AI Analysis</span>
+                                <span x-show="selectedDeal?.analyzed_at" class="text-xs text-gray-500" x-text="'Updated ' + formatDate(selectedDeal?.analyzed_at)"></span>
+                            </h3>
+                            <div class="flex gap-2">
+                                <button @click="showJsonView = false" 
+                                        :class="!showJsonView ? 'bg-forum-accent text-white' : 'bg-forum-border text-gray-400'"
+                                        class="px-3 py-1 rounded text-sm transition-colors">
+                                    Visual
+                                </button>
+                                <button @click="showJsonView = true"
+                                        :class="showJsonView ? 'bg-forum-accent text-white' : 'bg-forum-border text-gray-400'"
+                                        class="px-3 py-1 rounded text-sm transition-colors">
+                                    JSON (MCP)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Visual View -->
+                        <div x-show="!showJsonView" class="space-y-4">
+                            <!-- Description -->
+                            <div x-show="selectedDeal?.description" class="bg-forum-bg border border-forum-border rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-gray-400 mb-2">What They Do</h4>
+                                <p class="text-forum-text" x-text="selectedDeal?.description"></p>
+                            </div>
+
+                            <!-- Target Users & Industry -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div x-show="selectedDeal?.target_users" class="bg-forum-bg border border-forum-border rounded-lg p-4">
+                                    <h4 class="text-sm font-medium text-gray-400 mb-2">🎯 Target Users</h4>
+                                    <p class="text-forum-text text-sm" x-text="selectedDeal?.target_users"></p>
+                                </div>
+                                <div x-show="selectedDeal?.industry" class="bg-forum-bg border border-forum-border rounded-lg p-4">
+                                    <h4 class="text-sm font-medium text-gray-400 mb-2">🏭 Industry</h4>
+                                    <p class="text-forum-text text-sm" x-text="selectedDeal?.industry"></p>
+                                </div>
+                            </div>
+
+                            <!-- Core Features -->
+                            <div x-show="selectedDeal?.core_features?.length" class="bg-forum-bg border border-forum-border rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-gray-400 mb-2">⚡ Core Features</h4>
+                                <ul class="space-y-1">
+                                    <template x-for="feature in (selectedDeal?.core_features || [])" :key="feature">
+                                        <li class="text-sm text-forum-text flex items-start gap-2">
+                                            <span class="text-forum-accent">•</span>
+                                            <span x-text="feature"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+
+                            <!-- Replication Guide -->
+                            <div class="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-800/30 rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-purple-400 mb-3 flex items-center gap-2">
+                                    🔧 Replication Guide
+                                    <span class="text-xs text-gray-500">(for AI Agents)</span>
+                                </h4>
+                                
+                                <!-- MVP Effort -->
+                                <div x-show="selectedDeal?.mvp_effort_days" class="mb-4">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-sm text-gray-400">Estimated MVP Effort</span>
+                                        <span class="text-lg font-bold text-green-400" x-text="selectedDeal?.mvp_effort_days + ' person-days'"></span>
+                                    </div>
+                                    <div class="w-full bg-forum-border rounded-full h-2">
+                                        <div class="bg-gradient-to-r from-green-500 to-yellow-500 h-2 rounded-full transition-all"
+                                             :style="'width: ' + Math.min(100, (selectedDeal?.mvp_effort_days || 0) / 60 * 100) + '%'"></div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" 
+                                       x-text="'≈ ' + Math.ceil((selectedDeal?.mvp_effort_days || 0) / 20) + ' engineer(s) for ' + Math.ceil((selectedDeal?.mvp_effort_days || 0) / 20) + ' month(s)'"></p>
+                                </div>
+
+                                <!-- Tech Stack -->
+                                <div x-show="selectedDeal?.tech_stack && Object.keys(selectedDeal?.tech_stack || {}).length">
+                                    <span class="text-sm text-gray-400 mb-2 block">Tech Stack Needed</span>
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="(techs, category) in (selectedDeal?.tech_stack || {})" :key="category">
+                                            <div class="bg-forum-card border border-forum-border rounded px-2 py-1">
+                                                <span class="text-xs text-gray-500" x-text="category + ':'"></span>
+                                                <span class="text-xs text-forum-text" x-text="Array.isArray(techs) ? techs.join(', ') : techs"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AI Summary -->
+                            <div x-show="selectedDeal?.ai_summary" class="bg-forum-bg border border-forum-border rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-gray-400 mb-2">💡 AI Summary</h4>
+                                <p class="text-forum-text text-sm whitespace-pre-wrap" x-text="selectedDeal?.ai_summary"></p>
+                            </div>
+                        </div>
+
+                        <!-- JSON View (MCP) -->
+                        <div x-show="showJsonView" class="bg-forum-bg border border-forum-border rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-gray-500">MCP-compatible JSON • GET /mcp/deals/<span x-text="selectedDeal?.id"></span></span>
+                                <button @click="navigator.clipboard.writeText(JSON.stringify({deal: selectedDeal}, null, 2))"
+                                        class="text-xs text-blue-400 hover:text-blue-300">
+                                    Copy
+                                </button>
+                            </div>
+                            <pre class="text-xs text-forum-text overflow-x-auto max-h-64"><code x-text="JSON.stringify({
+                                deal: {
+                                    id: selectedDeal?.id,
+                                    company: selectedDeal?.company,
+                                    round: selectedDeal?.round,
+                                    amount_usd: selectedDeal?.amount_usd,
+                                    industry: selectedDeal?.industry
+                                },
+                                analysis: {
+                                    description: selectedDeal?.description,
+                                    target_users: selectedDeal?.target_users,
+                                    core_features: selectedDeal?.core_features,
+                                    ai_summary: selectedDeal?.ai_summary
+                                },
+                                replication_guide: {
+                                    mvp_effort_days: selectedDeal?.mvp_effort_days,
+                                    tech_stack: selectedDeal?.tech_stack
+                                }
+                            }, null, 2)"></code></pre>
+                        </div>
+                    </div>
+
                     <!-- Analyses Section -->
                     <div class="p-6">
                         <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -612,6 +740,7 @@ export const indexHtml = `
                 roundFilter: '',
                 sortBy: 'date',
                 showModal: false,
+                showJsonView: false,
                 modalLoading: false,
                 selectedDeal: null,
                 showAnalysisForm: false,
