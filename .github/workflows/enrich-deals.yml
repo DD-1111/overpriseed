@@ -1,0 +1,51 @@
+name: Enrich Deals
+
+on:
+  # Run after fetch-deals completes
+  workflow_run:
+    workflows: ["Fetch AI Funding News"]
+    types:
+      - completed
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max deals to enrich'
+        default: '3'
+        type: string
+      deal_id:
+        description: 'Specific deal ID (optional)'
+        required: false
+        type: string
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    # Only run on successful fetch or manual trigger
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests perplexity-ai
+      
+      - name: Enrich deals
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          PERPLEXITY_SESSION_TOKEN: ${{ secrets.PERPLEXITY_SESSION_TOKEN }}
+        run: |
+          cd scripts
+          if [ -n "${{ github.event.inputs.deal_id }}" ]; then
+            python enrich_deals.py --deal-id ${{ github.event.inputs.deal_id }}
+          else
+            python enrich_deals.py --limit ${{ github.event.inputs.limit || '3' }}
+          fi

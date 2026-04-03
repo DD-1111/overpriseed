@@ -104,6 +104,14 @@
 
 ## 进度记录
 
+### 2026-04-04 (早上 6:00)
+- **Deal Enrichment 功能**：新增 AI 增强分析
+  - 新增 `scripts/enrich_deals.py` 批量 enrichment 脚本
+  - 为每个 deal 生成：description, target_users, core_features, tech_stack, mvp_effort_days, ai_summary
+  - 新增 GitHub Actions `enrich-deals.yml` workflow
+  - 在 fetch-deals 成功后自动运行
+  - 支持手动触发 + --deal-id 参数
+
 ### 2026-04-02 (中午 12:00)
 - **Twitter/X 融资新闻抓取**：P2-8 补充完成
   - 新增 `scripts/fetch_twitter.py`
