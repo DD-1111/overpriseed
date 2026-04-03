@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { indexHtml } from './html'
+import { indexHtml, docsHtml } from './html'
 
 type Bindings = {
   DB: D1Database
@@ -11,6 +11,11 @@ const app = new Hono<{ Bindings: Bindings }>()
 // Serve frontend
 app.get('/', (c) => {
   return c.html(indexHtml)
+})
+
+// API Documentation
+app.get('/docs', (c) => {
+  return c.html(docsHtml)
 })
 
 app.use('/api/*', cors({

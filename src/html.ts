@@ -58,6 +58,7 @@ export const indexHtml = `
                              <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/>
                            </svg>
                         </a>
+                        <a href="/docs" class="text-gray-400 hover:text-forum-accent transition-colors text-sm" title="API Docs">API</a>
                     </nav>
                 </div>
             </div>
@@ -1175,5 +1176,236 @@ export const indexHtml = `
             }
         }
     </script>
+</body>
+</html>`
+
+export const docsHtml = `
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Overpriseed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'forum-bg': '#0a0a0a',
+                        'forum-card': '#1a1a1a',
+                        'forum-border': '#2a2a2a',
+                        'forum-text': '#e0e0e0',
+                        'forum-accent': '#ff4444',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-forum-bg text-forum-text min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center gap-4 mb-4">
+                <a href="/" class="text-forum-accent hover:underline">&larr; Back</a>
+            </div>
+            <h1 class="text-3xl font-bold text-forum-accent mb-2">📡 Overpriseed API</h1>
+            <p class="text-gray-400">Public API for accessing startup funding deals and community analyses.</p>
+            <p class="text-sm text-gray-500 mt-2">Base URL: <code class="bg-forum-card px-2 py-1 rounded">https://overpriseed.d1.sh</code></p>
+        </div>
+
+        <!-- Rate Limiting Notice -->
+        <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4 mb-8">
+            <h3 class="font-semibold text-yellow-400 mb-2">⚠️ Rate Limiting</h3>
+            <p class="text-sm text-gray-300">This API is rate-limited to <strong>100 requests per minute</strong> per IP. Responses include <code>X-RateLimit-*</code> headers.</p>
+        </div>
+
+        <!-- Endpoints -->
+        <div class="space-y-6">
+            <h2 class="text-xl font-bold text-white border-b border-forum-border pb-2">Endpoints</h2>
+
+            <!-- GET /api/health -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">GET</span>
+                    <code class="text-forum-text">/api/health</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">Health check endpoint.</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "status": "ok",
+  "timestamp": "2026-04-04T03:00:00.000Z",
+  "service": "overpriseed"
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- GET /api/v1/deals -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">GET</span>
+                    <code class="text-forum-text">/api/v1/deals</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">List all deals, ordered by newest first.</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "company": "ExampleAI",
+      "round": "Series A",
+      "amount_usd": 15000000,
+      "source_url": "https://...",
+      "industry": "Developer Tools",
+      "created_at": "2026-04-01T12:00:00.000Z"
+    }
+  ]
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- GET /api/v1/deals/:id -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">GET</span>
+                    <code class="text-forum-text">/api/v1/deals/:id</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">Get a single deal by ID, including all analyses.</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "success": true,
+  "data": {
+    "id": 1,
+    "company": "ExampleAI",
+    "round": "Series A",
+    "amount_usd": 15000000,
+    "analyses": [
+      {
+        "id": 1,
+        "author": "anon",
+        "content": "This could be built in a weekend...",
+        "overpriced_score": 8,
+        "tech_complexity": 3,
+        "ai_replaceability": 9,
+        "moat_assessment": 2
+      }
+    ]
+  }
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- GET /api/v1/analyses -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">GET</span>
+                    <code class="text-forum-text">/api/v1/analyses</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">List all analyses. Optional query param: <code class="bg-black/50 px-1 rounded">?deal_id=123</code></p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "deal_id": 1,
+      "author": "anon",
+      "content": "Analysis text...",
+      "overpriced_score": 8,
+      "tech_complexity": 3,
+      "ai_replaceability": 9,
+      "moat_assessment": 2,
+      "created_at": "2026-04-01T12:00:00.000Z"
+    }
+  ]
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- POST /api/v1/analyses -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">POST</span>
+                    <code class="text-forum-text">/api/v1/analyses</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">Submit a new analysis for a deal.</p>
+                <p class="text-xs text-gray-500 mb-2">Request body:</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto mb-3">
+                    <pre class="text-sm text-gray-300"><code>{
+  "deal_id": 1,
+  "author": "your_handle",
+  "content": "Your analysis...",
+  "overpriced_score": 7,      // 1-10
+  "tech_complexity": 4,       // 1-10
+  "ai_replaceability": 8,     // 1-10
+  "moat_assessment": 3        // 1-10
+}</code></pre>
+                </div>
+                <p class="text-xs text-gray-500">Required: deal_id, author, content. Scores optional (1-10 range).</p>
+            </div>
+
+            <!-- GET /api/v1/leaderboard -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">GET</span>
+                    <code class="text-forum-text">/api/v1/leaderboard</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">Top 20 deals ranked by average overpriced score.</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "company": "ExampleAI",
+      "round": "Series A",
+      "amount_usd": 15000000,
+      "analysis_count": 5,
+      "avg_overpriced": 8.2,
+      "avg_tech_complexity": 3.1,
+      "avg_ai_replaceability": 8.8,
+      "avg_moat": 2.4
+    }
+  ]
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- GET /api/v1/stats/industries -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">GET</span>
+                    <code class="text-forum-text">/api/v1/stats/industries</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">Industry distribution statistics.</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "success": true,
+  "data": [
+    { "industry": "Developer Tools", "count": 8, "total_funding": 120000000 },
+    { "industry": "Healthcare", "count": 5, "total_funding": 85000000 }
+  ]
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- GET /feed.xml -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded">RSS</span>
+                    <code class="text-forum-text">/feed.xml</code>
+                </div>
+                <p class="text-gray-400 text-sm">RSS 2.0 feed of latest deals. Subscribe in your favorite reader.</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-12 pt-6 border-t border-forum-border text-center text-gray-500 text-sm">
+            <p>Questions? Open an issue on <a href="https://github.com/overpriseed/overpriseed" class="text-forum-accent hover:underline">GitHub</a>.</p>
+        </div>
+    </div>
 </body>
 </html>`
