@@ -76,8 +76,10 @@
 - [ ] 每周发送 Overpriced Top 10
 
 ### 12. API 开放
-- [ ] 提供公开 API 给其他工具使用
-- [ ] Rate limiting
+- [x] 提供公开 API 给其他工具使用 ✅ (2026-04-05)
+- [x] API 文档页面 /docs ✅ (2026-04-05)
+- [x] MCP endpoints 文档 ✅ (2026-04-05)
+- [ ] Rate limiting (pending)
 
 ### 13. "复刻挑战" 提交系统
 - [ ] 允许用户提交自己的复刻项目 demo
@@ -98,6 +100,14 @@
 ---
 
 ## 进度记录
+
+### 2026-04-05 (早上 6:00)
+- **API 文档完善**：添加 MCP endpoints 说明
+  - 新增 MCP section 到 /docs 页面
+  - 文档化 /mcp/manifest, /mcp/deals, /mcp/deals/:id
+  - 添加 AI assistant 使用示例
+  - 紫色标签区分 MCP 端点
+  - ✅ 线上验证通过
 
 ### 2026-04-05 (凌晨 3:00)
 - **JSON 解析修复**：修复 enrich_deals.py 截断问题 ✅
