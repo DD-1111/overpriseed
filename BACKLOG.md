@@ -15,13 +15,8 @@
 ### 2. 添加数据去重逻辑 ✅ DONE
 **状态**: 已完成 - 用 company + amount 做唯一键
 
-### 3. 改进搜索 prompt
-**问题**: 同一个融资可能被重复抓取
-**方案**: 用 company + round + amount 做唯一键
-
-### 3. 改进搜索 prompt
-**当前**: "AI startup funding rounds this week"
-**改进**: 更具体的 prompt，要求返回结构化数据
+### 3. 改进搜索 prompt ✅ DONE
+**状态**: 已完成 - 结构化 prompt + JSON 提取
 
 ---
 
@@ -103,6 +98,14 @@
 ---
 
 ## 进度记录
+
+### 2026-04-04 (中午 12:00)
+- **Enrichment 问题排查**：发现解析错误
+  - 触发 enrich-deals workflow，只处理了 3 个 deals（默认 limit）
+  - 其中 2 个解析失败（Nomadic, Builder.ai）— Perplexity 返回的 JSON 被截断
+  - 1 个成功（ScaleOps）
+  - 清理 BACKLOG 重复条目（P0-3）
+  - 待修复：`enrich_deals.py` 的 JSON 解析逻辑需要改进
 
 ### 2026-04-04 (早上 6:00)
 - **Deal Enrichment 功能**：新增 AI 增强分析
