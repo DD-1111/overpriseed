@@ -85,49 +85,61 @@ def get_deals_to_enrich(limit: int = 10, deal_id: int = None) -> List[Dict]:
         return query_d1(sql, [limit])
 
 
-def enrich_deal(company: str, round: str, amount_usd: int) -> Dict:
-    """Use Perplexity to enrich deal with structured analysis."""
+def repair_truncated_json(json_str: str) -> str:
+    """Attempt to repair truncated JSON by closing open structures."""
+    import re
     
-    amount_str = f"${amount_usd:,}" if amount_usd else "undisclosed"
+    # Count open brackets
+    open_braces = json_str.count('{') - json_str.count('}')
+    open_brackets = json_str.count('[') - json_str.count(']')
     
-    prompt = f"""Analyze this startup for AI agents who want to understand and potentially replicate it:
-
-Company: {company}
-Funding: {round} round, {amount_str}
-
-Provide a structured analysis in JSON format:
-
-```json
-{{
-  "description": "2-3 sentence description of what the company does",
-  "target_users": "Who are the primary customers/users?",
-  "core_features": ["feature1", "feature2", "feature3"],
-  "tech_stack": {{
-    "frontend": ["React/Vue/etc"],
-    "backend": ["Node/Python/Go/etc"],
-    "ai_ml": ["OpenAI API/custom models/etc"],
-    "infrastructure": ["AWS/GCP/Cloudflare/etc"]
-  }},
-  "mvp_effort_days": 30,
-  "ai_summary": "One paragraph: Is this overpriced? What's the replication risk? Key insights for AI agents."
-}}
-```
-
-Be realistic about MVP effort - a competent 2-person team with AI assistance.
-Focus on what an AI agent would need to know to evaluate or replicate this product."""
-
-    result = search_perplexity(prompt)
+    # Check if we're in the middle of a string
+    in_string = False
+    last_quote_pos = -1
+    for i, c in enumerate(json_str):
+        if c == '\\' and i + 1 < len(json_str):
+            continue
+        if c == '"':
+            in_string = not in_string
+            last_quote_pos = i
     
-    # Extract JSON from response - try multiple strategies
+    repaired = json_str
+    
+    # Close open string
+    if in_string:
+        repaired += '"'
+    
+    # Remove trailing incomplete key-value (e.g., ', "key":' or ', "key": "val')
+    repaired = re.sub(r',\s*"[^"]*":\s*"?[^"{}[\]]*$', '', repaired)
+    repaired = re.sub(r',\s*$', '', repaired)
+    
+    # Recount after cleanup
+    open_braces = repaired.count('{') - repaired.count('}')
+    open_brackets = repaired.count('[') - repaired.count(']')
+    
+    # Close arrays first, then objects
+    repaired += ']' * max(0, open_brackets)
+    repaired += '}' * max(0, open_braces)
+    
+    return repaired
+
+
+def parse_json_robust(text: str) -> Dict:
+    """Try multiple strategies to extract JSON from text."""
     import re
     
     # Strategy 1: Find ```json ... ``` block
-    json_block_match = re.search(r'```json\s*([\s\S]*?)\s*```', result)
+    json_block_match = re.search(r'```json\s*([\s\S]*?)\s*```', text)
     if json_block_match:
         try:
             return json.loads(json_block_match.group(1))
         except json.JSONDecodeError:
-            pass
+            # Try repairing
+            try:
+                repaired = repair_truncated_json(json_block_match.group(1))
+                return json.loads(repaired)
+            except json.JSONDecodeError:
+                pass
     
     # Strategy 2: Find outermost { ... } with balanced braces
     def find_balanced_json(text):
@@ -155,26 +167,71 @@ Focus on what an AI agent would need to know to evaluate or replicate this produ
                 depth -= 1
                 if depth == 0:
                     return text[start:i+1]
-        return None
+        # If not balanced, return everything from start and try to repair
+        return text[start:]
     
-    json_str = find_balanced_json(result)
+    json_str = find_balanced_json(text)
     if json_str:
         try:
             return json.loads(json_str)
         except json.JSONDecodeError:
-            pass
+            # Try repairing truncated JSON
+            try:
+                repaired = repair_truncated_json(json_str)
+                return json.loads(repaired)
+            except json.JSONDecodeError:
+                pass
     
-    # Strategy 3: Simple regex fallback
+    # Strategy 3: Simple regex fallback with repair
     try:
-        json_match = re.search(r'\{[\s\S]*\}', result)
+        json_match = re.search(r'\{[\s\S]*', text)
         if json_match:
-            return json.loads(json_match.group())
+            repaired = repair_truncated_json(json_match.group())
+            return json.loads(repaired)
     except json.JSONDecodeError:
         pass
     
+    return None
+
+
+def enrich_deal(company: str, round: str, amount_usd: int, retry: int = 0) -> Dict:
+    """Use Perplexity to enrich deal with structured analysis."""
+    
+    amount_str = f"${amount_usd:,}" if amount_usd else "undisclosed"
+    
+    # Compact prompt to avoid truncation
+    prompt = f"""Analyze {company} ({round}, {amount_str}) for AI replication.
+
+Return JSON ONLY (no markdown, no explanation):
+{{"description":"what they do","target_users":"who uses it","core_features":["f1","f2","f3"],"tech_stack":{{"frontend":["x"],"backend":["x"],"ai_ml":["x"],"infrastructure":["x"]}},"mvp_effort_days":30,"ai_summary":"Is this overpriced? Replication risk?"}}
+
+Keep responses SHORT. MVP effort = 2-person team with AI."""
+
+    result = search_perplexity(prompt)
+    
+    parsed = parse_json_robust(result)
+    
+    if parsed and "description" in parsed:
+        return parsed
+    
+    # Retry once with simpler prompt
+    if retry == 0:
+        print(f"   ⚠️  Parse failed, retrying with simpler prompt...")
+        time.sleep(3)
+        
+        simple_prompt = f"""What does {company} do? (They raised {amount_str} in {round})
+        
+Return ONLY this JSON: {{"description":"2 sentences","target_users":"who","core_features":["a","b","c"],"tech_stack":{{"backend":["x"],"ai_ml":["x"]}},"mvp_effort_days":30,"ai_summary":"short analysis"}}"""
+        
+        result = search_perplexity(simple_prompt)
+        parsed = parse_json_robust(result)
+        
+        if parsed and "description" in parsed:
+            return parsed
+    
     return {
         "error": "Failed to parse response",
-        "raw": result[:500]
+        "raw": result[:500] if result else "empty response"
     }
 
 
