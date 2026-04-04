@@ -99,13 +99,22 @@
 
 ## 进度记录
 
+### 2026-04-05 (凌晨 3:00)
+- **JSON 解析修复**：修复 enrich_deals.py 截断问题 ✅
+  - 新增 `repair_truncated_json()` 修复不完整 JSON
+  - 新增 `parse_json_robust()` 多策略解析
+  - 使用紧凑 prompt 减少 token 截断
+  - 添加重试机制（简化 prompt 重试一次）
+  - 测试：3 个 deals 全部成功 enriched（Trayd, Obin AI, Manifold）
+  - 线上验证通过
+
 ### 2026-04-04 (中午 12:00)
 - **Enrichment 问题排查**：发现解析错误
   - 触发 enrich-deals workflow，只处理了 3 个 deals（默认 limit）
   - 其中 2 个解析失败（Nomadic, Builder.ai）— Perplexity 返回的 JSON 被截断
   - 1 个成功（ScaleOps）
   - 清理 BACKLOG 重复条目（P0-3）
-  - 待修复：`enrich_deals.py` 的 JSON 解析逻辑需要改进
+  - ✅ 已修复：JSON 解析逻辑
 
 ### 2026-04-04 (早上 6:00)
 - **Deal Enrichment 功能**：新增 AI 增强分析
