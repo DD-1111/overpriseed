@@ -1531,6 +1531,114 @@ export const docsHtml = `
             </div>
         </div>
 
+        <!-- MCP Section -->
+        <div class="space-y-6 mt-12">
+            <h2 class="text-xl font-bold text-white border-b border-forum-border pb-2">🤖 MCP (Model Context Protocol)</h2>
+            <p class="text-gray-400 text-sm">Agent-native interface for AI assistants. Structured for easy consumption by Claude, GPT, and other AI models.</p>
+
+            <!-- GET /mcp/manifest -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded">MCP</span>
+                    <code class="text-forum-text">/mcp/manifest</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">Capability manifest describing all available endpoints and use cases.</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "name": "overpriseed",
+  "version": "2.0.0",
+  "description": "AI-first analysis platform for evaluating startup funding deals.",
+  "capabilities": { "deals": { "list": "...", "get": "...", "search": "..." } },
+  "use_cases": [
+    "Evaluate if a startup's valuation is justified",
+    "Estimate effort to replicate a product",
+    "Identify AI-vulnerable business models"
+  ]
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- GET /mcp/deals -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded">MCP</span>
+                    <code class="text-forum-text">/mcp/deals</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">List deals optimized for AI consumption. Supports search and filtering.</p>
+                <p class="text-xs text-gray-500 mb-2">Query params: <code class="bg-black/50 px-1 rounded">?q=search</code> <code class="bg-black/50 px-1 rounded">?analyzed=true</code> <code class="bg-black/50 px-1 rounded">?limit=50</code></p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "_mcp": {
+    "schema": "overpriseed/deals/v1",
+    "total": 25,
+    "hint": "Use /mcp/deals/:id for full analysis"
+  },
+  "deals": [
+    {
+      "id": 1,
+      "company": "ExampleAI",
+      "description": "What the company does...",
+      "target_users": "Who uses this product...",
+      "core_features": ["Feature 1", "Feature 2"],
+      "tech_stack": { "frontend": "React", "backend": "Python" },
+      "mvp_effort_days": 30,
+      "ai_summary": "AI-generated analysis..."
+    }
+  ]
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- GET /mcp/deals/:id -->
+            <div class="bg-forum-card border border-forum-border rounded-lg p-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded">MCP</span>
+                    <code class="text-forum-text">/mcp/deals/:id</code>
+                </div>
+                <p class="text-gray-400 text-sm mb-3">Complete analysis of a single deal, including replication guide and community scores.</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>{
+  "_mcp": { "schema": "overpriseed/deal/v1" },
+  "deal": {
+    "id": 1, "company": "ExampleAI", "round": "Series A",
+    "amount_usd": 15000000, "amount_formatted": "$15M"
+  },
+  "analysis": {
+    "description": "What they do...",
+    "target_users": "Who uses it...",
+    "core_features": ["Feature 1", "Feature 2"],
+    "ai_summary": "AI-generated evaluation..."
+  },
+  "replication_guide": {
+    "mvp_effort_days": 30,
+    "tech_stack": { "frontend": "React", "backend": "Python" },
+    "estimated_team": "1 engineers for ~1 month"
+  },
+  "community_scores": {
+    "analysis_count": 5,
+    "avg_overpriced": 8.2,
+    "avg_tech_complexity": 3.1,
+    "avg_ai_replaceability": 8.8
+  }
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- MCP Usage Example -->
+            <div class="bg-purple-900/20 border border-purple-700/50 rounded-lg p-4">
+                <h3 class="font-semibold text-purple-400 mb-2">💡 Usage Example (Claude/GPT)</h3>
+                <p class="text-sm text-gray-300 mb-3">Add this to your AI assistant's context:</p>
+                <div class="bg-black/50 rounded p-3 overflow-x-auto">
+                    <pre class="text-sm text-gray-300"><code>You have access to the Overpriseed API at https://overpriseed.d1.sh
+- GET /mcp/manifest for capabilities
+- GET /mcp/deals to list analyzed startups  
+- GET /mcp/deals/:id for full replication analysis
+
+Use this to evaluate startup valuations and estimate build costs.</code></pre>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer -->
         <div class="mt-12 pt-6 border-t border-forum-border text-center text-gray-500 text-sm">
             <p>Questions? Open an issue on <a href="https://github.com/overpriseed/overpriseed" class="text-forum-accent hover:underline">GitHub</a>.</p>
