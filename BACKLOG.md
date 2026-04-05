@@ -79,7 +79,7 @@
 - [x] 提供公开 API 给其他工具使用 ✅ (2026-04-05)
 - [x] API 文档页面 /docs ✅ (2026-04-05)
 - [x] MCP endpoints 文档 ✅ (2026-04-05)
-- [ ] Rate limiting (pending)
+- [x] Rate limiting ✅ (2026-04-05)
 
 ### 13. "复刻挑战" 提交系统
 - [ ] 允许用户提交自己的复刻项目 demo
@@ -100,6 +100,17 @@
 ---
 
 ## 进度记录
+
+### 2026-04-05 (中午 12:00)
+- **API Rate Limiting**：P3-12 完成
+  - REST API: 60 req/min per IP
+  - MCP endpoints: 120 req/min per IP (AI agents 可能批量请求)
+  - Write operations: 10 req/min per IP
+  - 滑动窗口计数器 + IP 识别 (cf-connecting-ip)
+  - 响应 headers: X-RateLimit-Limit/Remaining/Reset
+  - 429 响应包含 retry_after
+  - 更新 /docs 页面文档
+  - ✅ 线上验证通过
 
 ### 2026-04-05 (早上 6:00)
 - **API 文档完善**：添加 MCP endpoints 说明
