@@ -623,6 +623,207 @@ function formatAmount(amount: number): string {
 // Original API Endpoints
 // ============================================
 
+// ============================================
+// Challenge & Submission Endpoints
+// ============================================
+
+// Get active/current challenge
+app.get('/api/v1/challenges/current', async (c) => {
+  try {
+    const db = c.env.DB
+    
+    // Get the most recent active challenge
+    const challenge = await db.prepare(`
+      SELECT c.*, d.company, d.round, d.amount_usd, d.industry,
+             d.description, d.mvp_effort_days, d.ai_summary, d.tech_stack
+      FROM challenges c
+      JOIN deals d ON c.deal_id = d.id
+      WHERE c.status = 'active'
+      ORDER BY c.week_number DESC
+      LIMIT 1
+    `).first() as any
+    
+    if (!challenge) {
+      return c.json({ success: true, data: null })
+    }
+    
+    // Get submissions for this challenge
+    const { results: submissions } = await db.prepare(`
+      SELECT * FROM submissions 
+      WHERE challenge_id = ?
+      ORDER BY votes DESC, created_at ASC
+    `).bind(challenge.id).all()
+    
+    // Parse tech_stack if exists
+    if (challenge.tech_stack) {
+      try { challenge.tech_stack = JSON.parse(challenge.tech_stack) } catch (e) { challenge.tech_stack = {} }
+    }
+    
+    return c.json({
+      success: true,
+      data: {
+        ...challenge,
+        submissions: submissions || []
+      }
+    })
+  } catch (error) {
+    console.error('Failed to fetch current challenge:', error)
+    return c.json({ success: false, error: 'Failed to fetch current challenge' }, 500)
+  }
+})
+
+// Get challenge by ID with submissions
+app.get('/api/v1/challenges/:id', async (c) => {
+  try {
+    const db = c.env.DB
+    const id = c.req.param('id')
+    
+    const challenge = await db.prepare(`
+      SELECT c.*, d.company, d.round, d.amount_usd, d.industry,
+             d.description, d.mvp_effort_days, d.ai_summary, d.tech_stack
+      FROM challenges c
+      JOIN deals d ON c.deal_id = d.id
+      WHERE c.id = ?
+    `).bind(id).first() as any
+    
+    if (!challenge) {
+      return c.json({ success: false, error: 'Challenge not found' }, 404)
+    }
+    
+    // Get submissions
+    const { results: submissions } = await db.prepare(`
+      SELECT * FROM submissions 
+      WHERE challenge_id = ?
+      ORDER BY votes DESC, created_at ASC
+    `).bind(id).all()
+    
+    // Parse tech_stack
+    if (challenge.tech_stack) {
+      try { challenge.tech_stack = JSON.parse(challenge.tech_stack) } catch (e) { challenge.tech_stack = {} }
+    }
+    
+    return c.json({
+      success: true,
+      data: {
+        ...challenge,
+        submissions: submissions || []
+      }
+    })
+  } catch (error) {
+    console.error('Failed to fetch challenge:', error)
+    return c.json({ success: false, error: 'Failed to fetch challenge' }, 500)
+  }
+})
+
+// Submit an MVP to a challenge
+app.post('/api/v1/submissions', async (c) => {
+  try {
+    const db = c.env.DB
+    const body = await c.req.json()
+    
+    const { challenge_id, author, repo_url, demo_url, description } = body
+    
+    // Validate required fields
+    if (!challenge_id || !author || !repo_url || !description) {
+      return c.json({
+        success: false,
+        error: 'Missing required fields: challenge_id, author, repo_url, description'
+      }, 400)
+    }
+    
+    // Check challenge exists and is active
+    const challenge = await db.prepare(
+      'SELECT id, status FROM challenges WHERE id = ?'
+    ).bind(challenge_id).first() as any
+    
+    if (!challenge) {
+      return c.json({ success: false, error: 'Challenge not found' }, 404)
+    }
+    
+    if (challenge.status !== 'active') {
+      return c.json({ success: false, error: 'Challenge is not active' }, 400)
+    }
+    
+    // Check if author already submitted to this challenge
+    const existing = await db.prepare(
+      'SELECT id FROM submissions WHERE challenge_id = ? AND author = ?'
+    ).bind(challenge_id, author).first()
+    
+    if (existing) {
+      return c.json({ success: false, error: 'You already submitted to this challenge' }, 400)
+    }
+    
+    // Insert submission
+    const result = await db.prepare(`
+      INSERT INTO submissions (challenge_id, author, repo_url, demo_url, description)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(challenge_id, author, repo_url, demo_url || null, description).run()
+    
+    const created = await db.prepare('SELECT * FROM submissions WHERE id = ?')
+      .bind(result.meta.last_row_id).first()
+    
+    return c.json({ success: true, data: created }, 201)
+  } catch (error) {
+    console.error('Failed to create submission:', error)
+    return c.json({ success: false, error: 'Failed to create submission' }, 500)
+  }
+})
+
+// Get submissions for a challenge
+app.get('/api/v1/submissions', async (c) => {
+  try {
+    const db = c.env.DB
+    const challengeId = c.req.query('challenge_id')
+    
+    if (!challengeId) {
+      return c.json({ success: false, error: 'challenge_id is required' }, 400)
+    }
+    
+    const { results } = await db.prepare(`
+      SELECT * FROM submissions 
+      WHERE challenge_id = ?
+      ORDER BY votes DESC, created_at ASC
+    `).bind(challengeId).all()
+    
+    return c.json({ success: true, data: results || [] })
+  } catch (error) {
+    console.error('Failed to fetch submissions:', error)
+    return c.json({ success: false, error: 'Failed to fetch submissions' }, 500)
+  }
+})
+
+// Vote on a submission (simple increment, no auth)
+app.post('/api/v1/submissions/:id/vote', async (c) => {
+  try {
+    const db = c.env.DB
+    const id = c.req.param('id')
+    
+    // Check submission exists
+    const submission = await db.prepare('SELECT id FROM submissions WHERE id = ?')
+      .bind(id).first()
+    
+    if (!submission) {
+      return c.json({ success: false, error: 'Submission not found' }, 404)
+    }
+    
+    // Increment vote count
+    await db.prepare('UPDATE submissions SET votes = votes + 1 WHERE id = ?')
+      .bind(id).run()
+    
+    const updated = await db.prepare('SELECT * FROM submissions WHERE id = ?')
+      .bind(id).first()
+    
+    return c.json({ success: true, data: updated })
+  } catch (error) {
+    console.error('Failed to vote:', error)
+    return c.json({ success: false, error: 'Failed to vote' }, 500)
+  }
+})
+
+// ============================================
+// Leaderboard Endpoint
+// ============================================
+
 // Leaderboard: deals ranked by average overpriced score
 app.get('/api/v1/leaderboard', async (c) => {
   try {
