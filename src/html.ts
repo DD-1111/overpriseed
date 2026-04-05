@@ -286,11 +286,180 @@ export const indexHtml = `
             </div>
 
             <!-- Challenges View -->
-            <div x-show="currentView === 'challenges'" x-cloak>
-                <div class="text-center py-12 text-gray-500">
-                    <h2 class="text-xl font-semibold mb-4">Weekly Challenges</h2>
-                    <p>Build alternatives to overpriced solutions</p>
-                    <p class="mt-4">Coming soon...</p>
+            <div x-show="currentView === 'challenges'" x-cloak x-init="$watch('currentView', val => val === 'challenges' && fetchCurrentChallenge())">
+                <div class="mb-6">
+                    <h2 class="text-xl font-semibold mb-2">🏆 Weekly Challenges</h2>
+                    <p class="text-gray-500">Build alternatives to overpriced solutions. Prove it can be done cheaper.</p>
+                </div>
+
+                <!-- Loading -->
+                <div x-show="challengeLoading" class="text-center py-12">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-forum-accent"></div>
+                    <p class="mt-2 text-gray-500">Loading challenge...</p>
+                </div>
+
+                <!-- No Active Challenge -->
+                <div x-show="!challengeLoading && !currentChallenge" class="text-center py-12">
+                    <p class="text-4xl mb-4">🎯</p>
+                    <p class="text-gray-500">No active challenge this week.</p>
+                    <p class="text-sm text-gray-600 mt-2">Check back on Monday for the next one!</p>
+                </div>
+
+                <!-- Current Challenge -->
+                <div x-show="!challengeLoading && currentChallenge" class="space-y-6">
+                    <!-- Challenge Card -->
+                    <div class="bg-gradient-to-r from-forum-accent/10 to-purple-500/10 border border-forum-accent/30 rounded-lg p-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <span class="bg-forum-accent/20 text-forum-accent text-xs font-bold px-3 py-1 rounded-full">
+                                    WEEK <span x-text="currentChallenge?.week_number"></span>
+                                </span>
+                                <h3 class="text-2xl font-bold text-white mt-3" x-text="currentChallenge?.deal?.company || 'Unknown'"></h3>
+                                <div class="flex items-center gap-3 mt-2 text-sm text-gray-400">
+                                    <span x-text="currentChallenge?.deal?.round || '-'"></span>
+                                    <span>•</span>
+                                    <span class="text-green-400 font-medium" x-text="'$' + formatNumber(currentChallenge?.deal?.amount_usd || 0)"></span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-500">Ends</p>
+                                <p class="text-forum-accent font-medium" x-text="formatDate(currentChallenge?.ends_at)"></p>
+                            </div>
+                        </div>
+                        
+                        <!-- Challenge Description -->
+                        <p class="text-gray-300 mb-4" x-text="currentChallenge?.description || 'Build an MVP that replicates the core functionality of this startup.'"></p>
+                        
+                        <!-- Stats -->
+                        <div class="flex items-center gap-6 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">🔧</span>
+                                <div>
+                                    <p class="text-white font-medium" x-text="(currentChallenge?.submissions?.length || 0) + ' submissions'"></p>
+                                    <p class="text-xs text-gray-500">so far</p>
+                                </div>
+                            </div>
+                            <a :href="currentChallenge?.deal?.source_url" target="_blank" 
+                               class="text-blue-400 hover:text-blue-300 transition-colors">
+                                View original deal →
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Submit MVP Button -->
+                    <button @click="showChallengeSubmitForm = true" 
+                            x-show="!showChallengeSubmitForm"
+                            class="w-full bg-forum-accent hover:bg-forum-accent/80 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <span>🚀</span> Submit Your MVP
+                    </button>
+
+                    <!-- Submit Form -->
+                    <div x-show="showChallengeSubmitForm" x-cloak 
+                         class="bg-forum-card border border-forum-border rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="font-semibold text-white">Submit Your MVP</h4>
+                            <button @click="showChallengeSubmitForm = false; challengeSubmitError = null" 
+                                    class="text-gray-500 hover:text-white">✕</button>
+                        </div>
+                        
+                        <div x-show="challengeSubmitError" class="bg-red-900/20 border border-red-800 rounded p-3 mb-4 text-sm text-red-400" x-text="challengeSubmitError"></div>
+                        
+                        <form @submit.prevent="submitChallengeEntry" class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Author / Handle *</label>
+                                <input type="text" x-model="challengeSubmitForm.author" required
+                                       placeholder="@yourhandle"
+                                       class="w-full bg-forum-bg border border-forum-border rounded px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Repo URL *</label>
+                                <input type="url" x-model="challengeSubmitForm.repo_url" required
+                                       placeholder="https://github.com/you/repo"
+                                       class="w-full bg-forum-bg border border-forum-border rounded px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Demo URL (optional)</label>
+                                <input type="url" x-model="challengeSubmitForm.demo_url"
+                                       placeholder="https://your-demo.vercel.app"
+                                       class="w-full bg-forum-bg border border-forum-border rounded px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Description *</label>
+                                <textarea x-model="challengeSubmitForm.description" required rows="3"
+                                          placeholder="Brief description of your approach, tech stack, time spent..."
+                                          class="w-full bg-forum-bg border border-forum-border rounded px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50 resize-none"></textarea>
+                            </div>
+                            <button type="submit" :disabled="challengeSubmitting"
+                                    class="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded transition-colors">
+                                <span x-show="!challengeSubmitting">Submit</span>
+                                <span x-show="challengeSubmitting">Submitting...</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Submissions List -->
+                    <div x-show="currentChallenge?.submissions?.length > 0">
+                        <h4 class="font-semibold text-white mb-4">📦 Submissions</h4>
+                        <div class="space-y-3">
+                            <template x-for="submission in currentChallenge.submissions" :key="submission.id">
+                                <div class="bg-forum-card border border-forum-border rounded-lg p-4 hover:border-forum-border/80">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <span class="text-white font-medium" x-text="submission.author"></span>
+                                                <span class="text-xs text-gray-500" x-text="formatDate(submission.created_at)"></span>
+                                            </div>
+                                            <p class="text-gray-400 text-sm mb-3" x-text="submission.description"></p>
+                                            <div class="flex items-center gap-4 text-sm">
+                                                <a :href="submission.repo_url" target="_blank" 
+                                                   class="text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                                                    <span>📁</span> Repo
+                                                </a>
+                                                <a x-show="submission.demo_url" :href="submission.demo_url" target="_blank"
+                                                   class="text-purple-400 hover:text-purple-300 flex items-center gap-1">
+                                                    <span>🔗</span> Demo
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="flex-shrink-0 ml-4">
+                                            <button @click="voteSubmission(submission.id)" 
+                                                    class="flex flex-col items-center gap-1 px-3 py-2 rounded-lg bg-forum-bg border border-forum-border hover:border-forum-accent/50 transition-colors">
+                                                <span class="text-xl">🔥</span>
+                                                <span class="text-white font-bold" x-text="submission.votes || 0"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- No Submissions Yet -->
+                    <div x-show="currentChallenge && (!currentChallenge.submissions || currentChallenge.submissions.length === 0)" 
+                         class="text-center py-8 text-gray-500 bg-forum-card border border-forum-border rounded-lg">
+                        <p class="text-4xl mb-2">🛠️</p>
+                        <p>No submissions yet. Be the first!</p>
+                    </div>
+                </div>
+
+                <!-- Past Challenges -->
+                <div x-show="!challengeLoading && pastChallenges.length > 0" class="mt-12">
+                    <h4 class="font-semibold text-white mb-4">📜 Past Challenges</h4>
+                    <div class="space-y-3">
+                        <template x-for="challenge in pastChallenges" :key="challenge.id">
+                            <div @click="viewPastChallenge(challenge)" 
+                                 class="bg-forum-card border border-forum-border rounded-lg p-4 hover:border-forum-accent/30 transition-colors cursor-pointer">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span class="text-xs text-gray-500">Week <span x-text="challenge.week_number"></span></span>
+                                        <h5 class="text-white font-medium" x-text="challenge.deal?.company || 'Unknown'"></h5>
+                                        <p class="text-sm text-gray-500" x-text="(challenge.submission_count || 0) + ' submissions'"></p>
+                                    </div>
+                                    <span class="text-gray-600">→</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
 
@@ -757,6 +926,20 @@ export const indexHtml = `
                 leaderboardData: [],
                 leaderboardLoading: false,
                 bubbleFilter: '',
+                
+                // Challenge data
+                currentChallenge: null,
+                challengeLoading: false,
+                pastChallenges: [],
+                showChallengeSubmitForm: false,
+                challengeSubmitting: false,
+                challengeSubmitError: null,
+                challengeSubmitForm: {
+                    author: '',
+                    repo_url: '',
+                    demo_url: '',
+                    description: ''
+                },
 
                 normalizeRound(round) {
                     if (round.includes('Pre-Seed') || round.includes('Pre Seed')) return 'Pre-Seed';
@@ -1300,6 +1483,125 @@ export const indexHtml = `
                         this.submitError = err.message || 'Failed to submit. Please try again.';
                     } finally {
                         this.submitting = false;
+                    }
+                },
+
+                // Challenge methods
+                async fetchCurrentChallenge() {
+                    if (this.currentChallenge) return; // Already loaded
+                    this.challengeLoading = true;
+                    try {
+                        const response = await fetch('/api/v1/challenges/current');
+                        const data = await response.json();
+                        if (data.success && data.data) {
+                            this.currentChallenge = data.data;
+                        }
+                        // Also fetch past challenges
+                        await this.fetchPastChallenges();
+                    } catch (err) {
+                        console.error('Error fetching current challenge:', err);
+                    } finally {
+                        this.challengeLoading = false;
+                    }
+                },
+
+                async fetchPastChallenges() {
+                    try {
+                        const response = await fetch('/api/v1/challenges');
+                        const data = await response.json();
+                        if (data.success) {
+                            // Filter out current challenge and completed ones
+                            const now = new Date();
+                            this.pastChallenges = (data.data || []).filter(c => 
+                                c.status === 'completed' || new Date(c.ends_at) < now
+                            ).slice(0, 5);
+                        }
+                    } catch (err) {
+                        console.error('Error fetching past challenges:', err);
+                    }
+                },
+
+                async submitChallengeEntry() {
+                    if (!this.currentChallenge) return;
+                    
+                    this.challengeSubmitting = true;
+                    this.challengeSubmitError = null;
+                    
+                    try {
+                        const payload = {
+                            challenge_id: this.currentChallenge.id,
+                            author: this.challengeSubmitForm.author.trim(),
+                            repo_url: this.challengeSubmitForm.repo_url.trim(),
+                            demo_url: this.challengeSubmitForm.demo_url.trim() || null,
+                            description: this.challengeSubmitForm.description.trim()
+                        };
+
+                        const response = await fetch('/api/v1/submissions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const data = await response.json();
+                        
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'Failed to submit');
+                        }
+
+                        // Add to submissions list
+                        if (!this.currentChallenge.submissions) {
+                            this.currentChallenge.submissions = [];
+                        }
+                        this.currentChallenge.submissions.unshift(data.data);
+                        
+                        // Reset form
+                        this.showChallengeSubmitForm = false;
+                        this.challengeSubmitForm = {
+                            author: '',
+                            repo_url: '',
+                            demo_url: '',
+                            description: ''
+                        };
+
+                    } catch (err) {
+                        console.error('Error submitting challenge entry:', err);
+                        this.challengeSubmitError = err.message || 'Failed to submit. Please try again.';
+                    } finally {
+                        this.challengeSubmitting = false;
+                    }
+                },
+
+                async voteSubmission(submissionId) {
+                    try {
+                        const response = await fetch(\`/api/v1/submissions/\${submissionId}/vote\`, {
+                            method: 'POST'
+                        });
+                        const data = await response.json();
+                        
+                        if (data.success && data.data) {
+                            // Update the submission in the list
+                            const submission = this.currentChallenge?.submissions?.find(s => s.id === submissionId);
+                            if (submission) {
+                                submission.votes = data.data.votes;
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error voting:', err);
+                    }
+                },
+
+                async viewPastChallenge(challenge) {
+                    this.challengeLoading = true;
+                    try {
+                        const response = await fetch(\`/api/v1/challenges/\${challenge.id}\`);
+                        const data = await response.json();
+                        if (data.success) {
+                            this.currentChallenge = data.data;
+                        }
+                    } catch (err) {
+                        console.error('Error fetching challenge:', err);
+                    } finally {
+                        this.challengeLoading = false;
                     }
                 }
             }
