@@ -8,6 +8,104 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+// ============================================
+// Rate Limiting Middleware
+// Simple sliding window counter per IP
+// ============================================
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
+
+const RATE_LIMIT = {
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 60,     // 60 requests per minute
+  cleanupInterval: 5 * 60 * 1000 // Clean old entries every 5 minutes
+}
+
+// Cleanup old entries periodically
+let lastCleanup = Date.now()
+
+function cleanupRateLimitStore() {
+  const now = Date.now()
+  if (now - lastCleanup > RATE_LIMIT.cleanupInterval) {
+    for (const [key, value] of rateLimitStore.entries()) {
+      if (value.resetAt < now) {
+        rateLimitStore.delete(key)
+      }
+    }
+    lastCleanup = now
+  }
+}
+
+function getRateLimitKey(c: any): string {
+  // Use CF-Connecting-IP (Cloudflare's real client IP)
+  return c.req.header('cf-connecting-ip') || 
+         c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 
+         'unknown'
+}
+
+app.use('/api/*', async (c, next) => {
+  cleanupRateLimitStore()
+  
+  const key = getRateLimitKey(c)
+  const now = Date.now()
+  
+  let record = rateLimitStore.get(key)
+  
+  if (!record || record.resetAt < now) {
+    // New window
+    record = { count: 1, resetAt: now + RATE_LIMIT.windowMs }
+    rateLimitStore.set(key, record)
+  } else {
+    record.count++
+  }
+  
+  // Set rate limit headers
+  const remaining = Math.max(0, RATE_LIMIT.maxRequests - record.count)
+  c.header('X-RateLimit-Limit', String(RATE_LIMIT.maxRequests))
+  c.header('X-RateLimit-Remaining', String(remaining))
+  c.header('X-RateLimit-Reset', String(Math.ceil(record.resetAt / 1000)))
+  
+  if (record.count > RATE_LIMIT.maxRequests) {
+    c.header('Retry-After', String(Math.ceil((record.resetAt - now) / 1000)))
+    return c.json({
+      success: false,
+      error: 'Too many requests. Please slow down.',
+      retry_after: Math.ceil((record.resetAt - now) / 1000)
+    }, 429)
+  }
+  
+  await next()
+})
+
+// Stricter rate limit for write operations (POST)
+app.use('/api/v1/analyses', async (c, next) => {
+  if (c.req.method !== 'POST') {
+    return next()
+  }
+  
+  const key = `write:${getRateLimitKey(c)}`
+  const now = Date.now()
+  const writeLimit = 10 // 10 writes per minute
+  
+  let record = rateLimitStore.get(key)
+  
+  if (!record || record.resetAt < now) {
+    record = { count: 1, resetAt: now + RATE_LIMIT.windowMs }
+    rateLimitStore.set(key, record)
+  } else {
+    record.count++
+  }
+  
+  if (record.count > writeLimit) {
+    return c.json({
+      success: false,
+      error: 'Too many write requests. Limit: 10 per minute.',
+      retry_after: Math.ceil((record.resetAt - now) / 1000)
+    }, 429)
+  }
+  
+  await next()
+})
+
 // Serve frontend
 app.get('/', (c) => {
   return c.html(indexHtml)
@@ -297,6 +395,37 @@ app.get('/api/v1/stats/industries', async (c) => {
 // Agent-native interface for AI assistants
 // ============================================
 
+// Rate limit for MCP endpoints
+app.use('/mcp/*', async (c, next) => {
+  cleanupRateLimitStore()
+  
+  const key = `mcp:${getRateLimitKey(c)}`
+  const now = Date.now()
+  const mcpLimit = 120 // Higher limit for MCP (AI agents may batch requests)
+  
+  let record = rateLimitStore.get(key)
+  
+  if (!record || record.resetAt < now) {
+    record = { count: 1, resetAt: now + RATE_LIMIT.windowMs }
+    rateLimitStore.set(key, record)
+  } else {
+    record.count++
+  }
+  
+  c.header('X-RateLimit-Limit', String(mcpLimit))
+  c.header('X-RateLimit-Remaining', String(Math.max(0, mcpLimit - record.count)))
+  c.header('X-RateLimit-Reset', String(Math.ceil(record.resetAt / 1000)))
+  
+  if (record.count > mcpLimit) {
+    return c.json({
+      error: 'Rate limit exceeded',
+      retry_after: Math.ceil((record.resetAt - now) / 1000)
+    }, 429)
+  }
+  
+  await next()
+})
+
 // MCP Manifest - describes capabilities for AI agents
 app.get('/mcp/manifest', (c) => {
   return c.json({
@@ -328,8 +457,10 @@ app.get('/mcp/manifest', (c) => {
       "Research competitive landscape"
     ],
     rate_limits: {
-      requests_per_minute: 60,
-      note: "No authentication required"
+      api_requests_per_minute: 60,
+      mcp_requests_per_minute: 120,
+      write_requests_per_minute: 10,
+      note: "No authentication required. Rate limits per IP."
     }
   })
 })

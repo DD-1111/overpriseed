@@ -1348,7 +1348,12 @@ export const docsHtml = `
         <!-- Rate Limiting Notice -->
         <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4 mb-8">
             <h3 class="font-semibold text-yellow-400 mb-2">⚠️ Rate Limiting</h3>
-            <p class="text-sm text-gray-300">This API is rate-limited to <strong>100 requests per minute</strong> per IP. Responses include <code>X-RateLimit-*</code> headers.</p>
+            <div class="text-sm text-gray-300 space-y-1">
+                <p><strong>REST API:</strong> 60 requests/minute per IP</p>
+                <p><strong>MCP endpoints:</strong> 120 requests/minute per IP</p>
+                <p><strong>Write operations:</strong> 10 requests/minute per IP</p>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Responses include <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>, and <code>X-RateLimit-Reset</code> headers.</p>
         </div>
 
         <!-- Endpoints -->
