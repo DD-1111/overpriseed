@@ -45,10 +45,11 @@
 
 ## 🟢 P2 - 计划中（本月）
 
-### 7. Challenge 系统
-- [ ] 每周自动选一个 deal 作为 challenge
-- [ ] 添加提交 MVP 链接功能
-- [ ] 社区投票机制
+### 7. Challenge 系统 🚧 IN PROGRESS
+- [x] 每周自动选一个 deal 作为 challenge (2026-04-06)
+- [x] 添加提交 MVP 链接功能 (2026-04-06)
+- [x] 社区投票机制 (2026-04-06)
+- [ ] 前端 Challenges 页面 UI
 
 ### 8. 更多数据源
 - [x] 接入 TechCrunch RSS ✅ (2026-03-29)
@@ -100,6 +101,18 @@
 ---
 
 ## 进度记录
+
+### 2026-04-06 (凌晨 3:00)
+- **Challenge 系统 API**：P2-7 后端完成
+  - 新增 `GET /api/v1/challenges/current` - 获取当前活跃 challenge
+  - 新增 `GET /api/v1/challenges/:id` - 获取 challenge 详情 + submissions
+  - 新增 `POST /api/v1/submissions` - 提交 MVP
+  - 新增 `GET /api/v1/submissions?challenge_id=` - 列出提交
+  - 新增 `POST /api/v1/submissions/:id/vote` - 投票
+  - 新增 `scripts/auto_challenge.py` - 自动选择每周 challenge
+  - 新增 `weekly-challenge.yml` workflow - 每周一自动运行
+  - ✅ 线上验证通过
+  - ⚠️ 待做：前端 Challenges 页面 UI
 
 ### 2026-04-05 (中午 12:00)
 - **API Rate Limiting**：P3-12 完成
