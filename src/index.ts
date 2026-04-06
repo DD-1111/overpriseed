@@ -721,7 +721,7 @@ app.post('/api/v1/submissions', async (c) => {
     const db = c.env.DB
     const body = await c.req.json()
     
-    const { challenge_id, author, repo_url, demo_url, description } = body
+    const { challenge_id, author, repo_url, demo_url, description, completion_days, team_size, tech_stack } = body
     
     // Validate required fields
     if (!challenge_id || !author || !repo_url || !description) {
@@ -729,6 +729,14 @@ app.post('/api/v1/submissions', async (c) => {
         success: false,
         error: 'Missing required fields: challenge_id, author, repo_url, description'
       }, 400)
+    }
+    
+    // Validate optional numeric fields
+    if (completion_days !== undefined && (completion_days < 1 || completion_days > 365)) {
+      return c.json({ success: false, error: 'completion_days must be between 1 and 365' }, 400)
+    }
+    if (team_size !== undefined && (team_size < 1 || team_size > 100)) {
+      return c.json({ success: false, error: 'team_size must be between 1 and 100' }, 400)
     }
     
     // Check challenge exists and is active
@@ -753,11 +761,20 @@ app.post('/api/v1/submissions', async (c) => {
       return c.json({ success: false, error: 'You already submitted to this challenge' }, 400)
     }
     
-    // Insert submission
+    // Insert submission with cost tracking fields
     const result = await db.prepare(`
-      INSERT INTO submissions (challenge_id, author, repo_url, demo_url, description)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(challenge_id, author, repo_url, demo_url || null, description).run()
+      INSERT INTO submissions (challenge_id, author, repo_url, demo_url, description, completion_days, team_size, tech_stack)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      challenge_id, 
+      author, 
+      repo_url, 
+      demo_url || null, 
+      description,
+      completion_days || null,
+      team_size || 1,
+      tech_stack || null
+    ).run()
     
     const created = await db.prepare('SELECT * FROM submissions WHERE id = ?')
       .bind(result.meta.last_row_id).first()

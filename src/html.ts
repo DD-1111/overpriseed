@@ -386,9 +386,35 @@ export const indexHtml = `
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">Description *</label>
                                 <textarea x-model="challengeSubmitForm.description" required rows="3"
-                                          placeholder="Brief description of your approach, tech stack, time spent..."
+                                          placeholder="Brief description of your approach..."
                                           class="w-full bg-forum-bg border border-forum-border rounded px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50 resize-none"></textarea>
                             </div>
+                            
+                            <!-- Cost Tracking Fields -->
+                            <div class="bg-forum-bg/50 border border-forum-border/50 rounded-lg p-4 space-y-4">
+                                <p class="text-xs text-gray-500 mb-2">📊 Cost Tracking (helps calculate "Real Cost")</p>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-1">Days to Build</label>
+                                        <input type="number" x-model="challengeSubmitForm.completion_days" min="1" max="365"
+                                               placeholder="e.g. 3"
+                                               class="w-full bg-forum-bg border border-forum-border rounded px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-1">Team Size</label>
+                                        <input type="number" x-model="challengeSubmitForm.team_size" min="1" max="100"
+                                               placeholder="1"
+                                               class="w-full bg-forum-bg border border-forum-border rounded px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Tech Stack</label>
+                                    <input type="text" x-model="challengeSubmitForm.tech_stack"
+                                           placeholder="e.g. React, Node.js, PostgreSQL"
+                                           class="w-full bg-forum-bg border border-forum-border rounded px-4 py-2 text-forum-text focus:outline-none focus:border-forum-accent/50">
+                                </div>
+                            </div>
+                            
                             <button type="submit" :disabled="challengeSubmitting"
                                     class="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded transition-colors">
                                 <span x-show="!challengeSubmitting">Submit</span>
@@ -410,6 +436,33 @@ export const indexHtml = `
                                                 <span class="text-xs text-gray-500" x-text="formatDate(submission.created_at)"></span>
                                             </div>
                                             <p class="text-gray-400 text-sm mb-3" x-text="submission.description"></p>
+                                            
+                                            <!-- Cost Tracking Info -->
+                                            <div x-show="submission.completion_days || submission.tech_stack" class="mb-3 flex flex-wrap gap-2 text-xs">
+                                                <span x-show="submission.completion_days" class="bg-green-900/30 text-green-400 px-2 py-1 rounded">
+                                                    ⏱️ <span x-text="submission.completion_days"></span> days
+                                                </span>
+                                                <span x-show="submission.team_size > 1" class="bg-blue-900/30 text-blue-400 px-2 py-1 rounded">
+                                                    👥 <span x-text="submission.team_size"></span> people
+                                                </span>
+                                                <span x-show="submission.tech_stack" class="bg-purple-900/30 text-purple-400 px-2 py-1 rounded">
+                                                    🛠️ <span x-text="submission.tech_stack"></span>
+                                                </span>
+                                            </div>
+                                            
+                                            <!-- Real Cost Comparison -->
+                                            <div x-show="submission.completion_days && currentChallenge?.amount_usd" 
+                                                 class="mb-3 bg-forum-accent/10 border border-forum-accent/30 rounded p-2 text-xs">
+                                                <span class="text-gray-400">Real Cost:</span>
+                                                <span class="text-forum-accent font-bold" 
+                                                      x-text="'$' + formatNumber((submission.completion_days || 1) * (submission.team_size || 1) * 500)"></span>
+                                                <span class="text-gray-500">vs</span>
+                                                <span class="text-green-400" x-text="'$' + formatNumber(currentChallenge.amount_usd)"></span>
+                                                <span class="text-gray-400">raised</span>
+                                                <span class="text-yellow-400 ml-1" 
+                                                      x-text="'(' + Math.round(currentChallenge.amount_usd / ((submission.completion_days || 1) * (submission.team_size || 1) * 500)) + 'x overpriced)'"></span>
+                                            </div>
+                                            
                                             <div class="flex items-center gap-4 text-sm">
                                                 <a :href="submission.repo_url" target="_blank" 
                                                    class="text-blue-400 hover:text-blue-300 flex items-center gap-1">
@@ -938,7 +991,10 @@ export const indexHtml = `
                     author: '',
                     repo_url: '',
                     demo_url: '',
-                    description: ''
+                    description: '',
+                    completion_days: '',
+                    team_size: '1',
+                    tech_stack: ''
                 },
 
                 normalizeRound(round) {
@@ -1533,7 +1589,10 @@ export const indexHtml = `
                             author: this.challengeSubmitForm.author.trim(),
                             repo_url: this.challengeSubmitForm.repo_url.trim(),
                             demo_url: this.challengeSubmitForm.demo_url.trim() || null,
-                            description: this.challengeSubmitForm.description.trim()
+                            description: this.challengeSubmitForm.description.trim(),
+                            completion_days: this.challengeSubmitForm.completion_days ? parseInt(this.challengeSubmitForm.completion_days) : null,
+                            team_size: parseInt(this.challengeSubmitForm.team_size) || 1,
+                            tech_stack: this.challengeSubmitForm.tech_stack.trim() || null
                         };
 
                         const response = await fetch('/api/v1/submissions', {
@@ -1560,7 +1619,10 @@ export const indexHtml = `
                             author: '',
                             repo_url: '',
                             demo_url: '',
-                            description: ''
+                            description: '',
+                            completion_days: '',
+                            team_size: '1',
+                            tech_stack: ''
                         };
 
                     } catch (err) {
